@@ -19,7 +19,7 @@
 -- which the user may use to hide the section's contents
 --
 ----------------------------------------
-GuiUtilities = require(script.Parent.GuiUtilities)
+local GuiUtilities = require(script.Parent.GuiUtilities)
 
 local kRightButtonAsset = "rbxasset://textures/TerrainTools/button_arrow.png"
 local kDownButtonAsset = "rbxasset://textures/TerrainTools/button_arrow_down.png"
@@ -27,7 +27,9 @@ local kDownButtonAsset = "rbxasset://textures/TerrainTools/button_arrow_down.png
 local kArrowSize = 9
 local kDoubleClickTimeSec = 0.5
 
-CollapsibleTitledSectionClass = {}
+local titleBarSize = 20
+
+local CollapsibleTitledSectionClass = {}
 CollapsibleTitledSectionClass.__index = CollapsibleTitledSectionClass
 
 
