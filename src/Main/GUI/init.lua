@@ -1,6 +1,4 @@
 
-local HttpService = game:GetService("HttpService")
-
 local StudioWidgets = require(script:WaitForChild("StudioWidgets"))
 local WallyApi = require(script.Parent:WaitForChild("WallyApi"))
 
