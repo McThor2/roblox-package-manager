@@ -4,6 +4,8 @@ local zzlib = require(script:WaitForChild("zzlib"))
 local VirtualPath = {}
 VirtualPath.__index = VirtualPath
 
+export type VirtualPath = typeof(VirtualPath.new())
+
 function VirtualPath.new(path: string, content: string?)
 	local self = {}
 	self.parent = nil
@@ -80,7 +82,7 @@ end
 
 function VirtualPath:__tostring()
 	
-	local pathString = self:GetAbsolutePath() 
+	local pathString = self:GetAbsolutePath()
 	
 	for _, child in self.children do
 		pathString = pathString .. "\n" .. tostring(child)
@@ -125,6 +127,7 @@ function VirtualPath.fromZip(rawZip: string)
 		table.insert(files, {name = name, content = content})
 	end
 	
+	-- selene: allow (multiple_statements)
 	table.sort(files, function(a, b) return #a.name > #b.name end)
 	
 	local root = VirtualPath.new(".")
