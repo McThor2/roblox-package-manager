@@ -157,7 +157,8 @@ do
 		rootFrame.BackgroundTransparency = 1
 		rootFrame.BorderSizePixel = 0
 
-		local textButton = Instance.new("TextButton", rootFrame)
+		local textButton = Instance.new("TextButton")
+		textButton.Parent = rootFrame
 		textButton.Size = UDim2.new(1, -25, 0, HEIGHT - 10)
 		textButton.TextSize = 10
 		textButton.ZIndex = 5
@@ -174,7 +175,8 @@ do
 		StudioWidgets.GuiUtilities.syncGuiElementBackgroundColor(textButton)
 		StudioWidgets.GuiUtilities.syncGuiElementBorderColor(textButton)
 		
-		local versionInfo = Instance.new("TextLabel", rootFrame)
+		local versionInfo = Instance.new("TextLabel")
+		versionInfo.Parent = rootFrame
 		versionInfo.Size = UDim2.new(1, -40, 1, -HEIGHT + 2)
 		versionInfo.TextSize = 10
 		versionInfo.Position = UDim2.new(0.5, 0, 1, 0)
@@ -270,7 +272,8 @@ do
 		rootFrame.BackgroundTransparency = 0.9
 		rootFrame.BorderSizePixel = 0
 		
-		local listLayout = Instance.new("UIListLayout", rootFrame)
+		local listLayout = Instance.new("UIListLayout")
+		listLayout.Parent = rootFrame
 		listLayout.Padding = UDim.new(0, 5)
 		listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 		
@@ -366,6 +369,7 @@ end
 
 function GUI:Init(plugin)
 
+	--selene: allow(unused_variable)
 	local toolbar, widget = createToolbar(plugin)
 
 	local topFrame = blankFrame()
