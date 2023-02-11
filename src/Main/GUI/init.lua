@@ -106,7 +106,15 @@ local function createMenuBar(buttonTexts: {string})
 
 	local iconImage = Instance.new("ImageLabel")
 	iconImage.Image = ICON_ID
+	iconImage.Size = UDim2.new(0, 50, 1, -5)
+	iconImage.BackgroundTransparency = 1
 	iconImage.Parent = rootFrame
+
+	local iconAspectRatio = Instance.new("UIAspectRatioConstraint")
+	iconAspectRatio.AspectRatio = 1
+	iconAspectRatio.AspectType = Enum.AspectType.ScaleWithParentSize
+	iconAspectRatio.DominantAxis = Enum.DominantAxis.Height
+	iconAspectRatio.Parent = iconImage
 	
 	local uiLayout = Instance.new("UIListLayout")
 	uiLayout.VerticalAlignment = Enum.VerticalAlignment.Center
