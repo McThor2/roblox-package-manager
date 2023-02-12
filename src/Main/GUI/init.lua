@@ -30,6 +30,8 @@ local function blankFrame()
 	return rootFrame
 end
 
+local openEvent = Instance.new("BindableEvent")
+GUI.Opened = openEvent.Event
 local function createToolbar(plugin)
 	local toolbar = plugin:CreateToolbar(WIDGET_TITLE)
 
@@ -50,7 +52,9 @@ local function createToolbar(plugin)
 	button.ClickableWhenViewportHidden = true
 
 	local function openGui()
-
+		if not widget.Enabled then
+			openEvent:Fire()
+		end
 		widget.Enabled = true
 	end
 
