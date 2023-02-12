@@ -2,7 +2,7 @@
 --!nonstrict
 -- McThor2
 
-local _version = "0.1.1"
+local _version = "0.1.0"
 
 local root = script.Parent
 
