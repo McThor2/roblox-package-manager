@@ -9,7 +9,7 @@ local downloadCallback, wallyCallback
 
 local GUI = {}
 
-local WIDGET_TITLE = "Framework Manager"
+local WIDGET_TITLE = "RPM"
 
 local WIDGET_DEFAULT_WIDTH = 300
 local WIDGET_DEFAULT_HEIGHT = 200
@@ -29,7 +29,7 @@ local function blankFrame()
 end
 
 local function createToolbar(plugin)
-	local toolbar = plugin:CreateToolbar("Framework Manager")
+	local toolbar = plugin:CreateToolbar(WIDGET_TITLE)
 
 	local widgetInfo = DockWidgetPluginGuiInfo.new(
 		Enum.InitialDockState.Float,  -- Widget will be initialized in floating panel
@@ -41,10 +41,14 @@ local function createToolbar(plugin)
 		WIDGET_MIN_HEIGHT     -- Minimum height of the floating window
 	)
 
-	local widget = plugin:CreateDockWidgetPluginGui("Framework Manager", widgetInfo)
+	local widget = plugin:CreateDockWidgetPluginGui(WIDGET_TITLE, widgetInfo)
 	widget.Title = WIDGET_TITLE
 
-	local button = toolbar:CreateButton("Open", "Opens the Framework Manager GUI", "rbxassetid://4458901886")
+	local button = toolbar:CreateButton(
+		"Open", 
+		"Opens the Roblox Package Manager GUI", 
+		"rbxassetid://4458901886"
+	)
 	button.ClickableWhenViewportHidden = true
 
 	local function openGui()
