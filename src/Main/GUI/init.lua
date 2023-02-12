@@ -19,7 +19,7 @@ local WIDGET_DEFAULT_HEIGHT = 200
 local WIDGET_MIN_WIDTH = 300
 local WIDGET_MIN_HEIGHT = 200
 
-local DEFAULT_MENU = "Manual"
+local DEFAULT_MENU = "Download"
 
 local function blankFrame()
 	local rootFrame = Instance.new("Frame")
@@ -322,6 +322,8 @@ do
 			
 		end)
 		
+		self:_updateSize()
+
 		return self
 	end
 	
@@ -402,16 +404,16 @@ function GUI:Init(plugin)
 	
 	bottomFrame.Parent = widget
 	
-	local menuFrame, menuButtons = createMenuBar({"Manual", "Search"})
+	local menuFrame, menuButtons = createMenuBar({"Download", "Search Wally"})
 	menuFrame.Parent = topFrame
 	
 	local menuFrames = {}
 	
 	local manualFrame = blankFrame()
-	menuFrames.Manual = manualFrame
+	menuFrames["Download"] = manualFrame
 	
 	local wallyFrame = blankFrame()
-	menuFrames.Search = wallyFrame
+	menuFrames["Search Wally"] = wallyFrame
 	
 	for buttonName, button in pairs(menuButtons) do
 		button.Activated:Connect(
