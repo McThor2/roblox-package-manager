@@ -25,7 +25,7 @@ local function onDownload(url: string)
 
 	local selected = Selection:Get()
 
-	local parent = ServerStorage.Packages
+	local parent = Config:GetPackageLocation()
 	
 	-- TODO: Search for existing package
 
