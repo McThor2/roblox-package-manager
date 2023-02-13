@@ -48,7 +48,7 @@ local function createToolbar(plugin)
 	local widget = plugin:CreateDockWidgetPluginGui(WIDGET_TITLE, widgetInfo)
 	widget.Title = WIDGET_TITLE
 
-	local button = toolbar:CreateButton("Open", "Opens the Roblox Package Manager GUI", ICON_ID)
+	local button = toolbar:CreateButton("Open RPM GUI", "Opens the Roblox Package Manager GUI", ICON_ID)
 	button.ClickableWhenViewportHidden = true
 
 	local function openGui()
