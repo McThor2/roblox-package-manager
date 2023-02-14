@@ -1,3 +1,9 @@
 {
-  "ignoreUnknownInstances": true
+  "ignoreUnknownInstances": true,
+  "className": "Folder",
+  "properties": {
+    "Attributes": {
+      "version": {"String": "0.1.0"}
+    }
+  }
 }
