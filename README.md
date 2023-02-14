@@ -21,7 +21,7 @@ There are currently two menus that exist. One headed with "Download", the other 
 
 If you know what package you want then you can use the download menu by simply entering the package in `<scope>/<name>@<version>` format e.g. `evaera/promise@4.0.0` . When you click download, the package will be downloaded and installed into the `PackageLocation` in the config (currently set to the default of `ReplicatedStorage/Packages`).
 
-The search menu is for finding specific packages on the Wally index. You can enter any search term and see results (if there are any). A typical use case is searching by a creator / scope and seeing what packages they have.
+The search menu is for finding specific packages on the Wally index. You can enter any search term and see results (if there are any). Each result is seperated by `scope/name` and each result can be clicked to reveal the available versions of that package. A typical use case is searching by a creator / scope and seeing what packages they have.
 
 ## Existing work
 
