@@ -1,8 +1,6 @@
 
 # <img src=https://tr.rbxcdn.com/1941e3ed5e94e8dd0bbc17f84af893e1/420/420/Decal/Png width=40 height=40> Roblox Package Manager
 
----
-
 ## [Roblox Marketplace](https://create.roblox.com/marketplace/asset/12442691141/Roblox-Package-Manager)
 
 ## Let's talk about packages
@@ -13,6 +11,10 @@ For those who don't know, Wally is a package index & package management tool tha
 
 Enter the RPM plugin. This allows you to search the full Wally package index from studio, and to download specific packages into studio directly.
 
+## Installation
+
+You can install the plugin straight from the creator [marketplace](https://create.roblox.com/marketplace/asset/12442691141/Roblox-Package-Manager). Alternatively you can clone the repo from [GitHub](https://github.com/McThor2/roblox-package-manager), sync into a place and save as a local plugin.
+
 ## Usage
 
 There are currently two menus that exist. One headed with "Download", the other with "Search Wally".
@@ -20,16 +22,6 @@ There are currently two menus that exist. One headed with "Download", the other 
 If you know what package you want then you can use the download menu by simply entering the package in `<scope>/<name>@<version>` format e.g. `evaera/promise@4.0.0` . When you click download, the package will be downloaded and installed into the `PackageLocation` in the config (currently set to the default of `ReplicatedStorage/Packages`).
 
 The search menu is for finding specific packages on the Wally index. You can enter any search term and see results (if there are any). A typical use case is searching by a creator / scope and seeing what packages they have.
-
-## Installation
-
-You can install the plugin straight from the creator [marketplace](https://create.roblox.com/marketplace/asset/12442691141/Roblox-Package-Manager). Alternatively you can clone the repo from [GitHub](https://github.com/McThor2/roblox-package-manager), sync into a place and save as a local plugin.
-
-## Feedback
-
-I am keen to hear all opinions regarding your own package experiences so far. Particularly how you expect to be able to find / refer to dependencies.
-
-I have an idea about using ObjectValues as references to try and create some kind of standard as an alternative to assuming packages like at a certain location e.g. `ReplicatedStorage/Packages`.
 
 ## Existing work
 
