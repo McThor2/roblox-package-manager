@@ -13,7 +13,7 @@ Enter the RPM plugin. This allows you to search the full Wally package index fro
 
 ## Installation
 
-You can install the plugin straight from the creator [marketplace](https://create.roblox.com/marketplace/asset/12442691141/Roblox-Package-Manager). Alternatively you can clone the repo from [GitHub](https://github.com/McThor2/roblox-package-manager), sync into a place and save as a local plugin.
+You can install the plugin straight from the creator [marketplace](https://create.roblox.com/marketplace/asset/12442691141/Roblox-Package-Manager). Alternatively you can clone the repo, sync into a place and save as a local plugin.
 
 ## Usage
 
