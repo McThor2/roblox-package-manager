@@ -299,7 +299,9 @@ do
 		rootFrame.AnchorPoint = Vector2.new(0.5, 1)
 		rootFrame.Position = UDim2.fromScale(0.5, 1)
 		rootFrame.BackgroundTransparency = 0.9
-		rootFrame.BorderSizePixel = 0
+		rootFrame.BorderSizePixel = 1
+		local shade = 40
+		rootFrame.BorderColor3 = Color3.fromRGB(shade, shade, shade)
 		rootFrame.CanvasSize = UDim2.fromOffset(0,0)
 		rootFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
