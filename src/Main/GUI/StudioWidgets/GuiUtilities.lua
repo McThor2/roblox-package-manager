@@ -83,7 +83,7 @@ end
 
 function module.syncGuiElementStripeColor(guiElement)
 	local function setColors()
-		if ((guiElement.LayoutOrder + 1) % 2 == 0) then 
+		if (guiElement.LayoutOrder + 1) % 2 == 0 then
 			guiElement.BackgroundColor3 = settings().Studio.Theme:GetColor(Enum.StudioStyleGuideColor.MainBackground)
 		else
 			guiElement.BackgroundColor3 = settings().Studio.Theme:GetColor(Enum.StudioStyleGuideColor.CategoryItem)
@@ -145,7 +145,7 @@ function module.MakeStandardFixedHeightFrame(name)
 end
 
 function module.AdjustHeightDynamicallyToLayout(frame, uiLayout, optPadding)
-	if (not optPadding) then 
+	if not optPadding then
 		optPadding = 0
 	end
 
@@ -170,41 +170,6 @@ function module.AddStripedChildrenToListFrame(listFrame, frames)
 	end
 end
 
-local function MakeSectionInternal(parentGui, name, title, contentHeight)
-	local frame = Instance.new("Frame")
-	frame.Name = name
-	frame.BackgroundTransparency = 1
-	frame.Parent = parentGui
-	frame.BackgroundTransparency = 1
-	frame.BorderSizePixel = 0
-	
-	-- If title is "nil', no title bar.
-	local contentYOffset = 0
-	local titleBar = nil
-	if (title ~= nil) then  
-		local titleBarFrame = Instance.new("Frame")
-		titleBarFrame.Name = "TitleBarFrame"
-		titleBarFrame.Parent = frame
-		titleBarFrame.Position = UDim2.new(0, 0, 0, 0)
-		titleBarFrame.LayoutOrder = 0
-
-		local titleBar = Instance.new("TextLabel")
-		titleBar.Name = "TitleBarLabel"
-		titleBar.Text = title
-		titleBar.Parent = titleBarFrame
-		titleBar.BackgroundTransparency = 1
-		titleBar.Position = UDim2.new(0, module.kStandardHMargin, 0, 0)
-
-		module.syncGuiElementFontColor(titleBar)
-	
-		contentYOffset = contentYOffset + module.kTitleBarHeight
-	end
-
-	frame.Size = UDim2.new(1, 0, 0, contentYOffset + contentHeight)
-
-	return frame
-end
-
 function module.MakeStandardPropertyLabel(text, opt_ignoreThemeUpdates)
 	local label = Instance.new('TextLabel')
 	label.Name = 'Label'
@@ -217,7 +182,7 @@ function module.MakeStandardPropertyLabel(text, opt_ignoreThemeUpdates)
 	label.Position = UDim2.new(0, module.StandardLineLabelLeftMargin, 0.5, module.kTextVerticalFudge)
 	label.Size = UDim2.new(0, module.StandardLineLabelWidth, 1, 0)
 
-	if (not opt_ignoreThemeUpdates) then 			
+	if not opt_ignoreThemeUpdates then		
 		module.syncGuiElementFontColor(label)
 	end
 
