@@ -63,6 +63,8 @@ end
 
 local function init()
 
+	print("RPM version v" .. tostring(_version))
+
 	GUI:Init(plugin)
 	GUI:RegisterDownloadCallback(onDownload)
 	GUI:RegisterWallySearch(onWally)
