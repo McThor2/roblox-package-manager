@@ -6,11 +6,13 @@ local DEFAULT_PACKAGE_LOCATION = "ReplicatedStorage/Packages"
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
 local HttpService = game:GetService("HttpService")
 
 local LOCATION_LOOKUP = {
     ["ReplicatedStorage"] = ReplicatedStorage,
-    ["ServerStorage"] = ServerStorage
+    ["ServerStorage"] = ServerStorage,
+    ["StarterPlayer"] = StarterPlayer
 }
 
 Config._decoded = nil
