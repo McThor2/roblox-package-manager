@@ -104,8 +104,6 @@ local function init()
     
     local placeConfig = Config:Load()
 
-	print(placeConfig)
-
 	if not placeConfig or not placeConfig["PackageLocation"] then
         Config:Set("PackageLocation", DEFAULT_PACKAGE_LOCATION)
 	end
@@ -115,9 +113,7 @@ local function init()
             return
         end
 
-        local newConfig = Config:Load()
-
-        print(newConfig)
+        Config:Load()
     end)
 
 end
