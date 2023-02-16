@@ -289,76 +289,33 @@ export type ResultRow = typeof(ResultRow.new())
 local SearchResults = {}
 do
 	SearchResults.__index = SearchResults
-	
+
 	local PADDING = 5
-	
+
 	function SearchResults.new()
-		
+	
 		local rootFrame = Instance.new("ScrollingFrame")
 		rootFrame.Size = UDim2.new(1,0,1,-40)
 		rootFrame.AnchorPoint = Vector2.new(0.5, 1)
 		rootFrame.Position = UDim2.fromScale(0.5, 1)
 		rootFrame.BackgroundTransparency = 0.9
 		rootFrame.BorderSizePixel = 0
-		
+		rootFrame.CanvasSize = UDim2.fromOffset(0,0)
+		rootFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
 		local listLayout = Instance.new("UIListLayout")
 		listLayout.Parent = rootFrame
-		listLayout.Padding = UDim.new(0, 5)
+		listLayout.Padding = UDim.new(0, PADDING)
 		listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		
+
 		local self = {}
 		setmetatable(self, SearchResults)
 		self.Frame = rootFrame
 		self.UILayout = listLayout
-		
-		self._childConnections = {}
-		
-		self.Frame.ChildAdded:Connect(function(child)
-			self:_updateSize()
-			
-			if not child:IsA("GuiObject") then
-				return
-			end
-
-			local connection = child:GetPropertyChangedSignal("Size"):Connect(function()
-				self:_updateSize()
-			end)
-			
-			self._childConnections[child] = connection
-		end)
-		
-		self.Frame.ChildRemoved:Connect(function(child)
-			self:_updateSize()
-			
-			local connection = self._childConnections[child]
-			if connection then
-				connection:Disconnect()
-			end
-			
-		end)
-		
-		self:_updateSize()
 
 		return self
 	end
-	
-	function SearchResults:_updateSize()
-		
-		local totalSize = 0
-		
-		for _, child in self.Frame:GetChildren() do
-			
-			if not child:IsA("GuiObject") then
-				continue
-			end
-			
-			totalSize += child.AbsoluteSize.Y + self.UILayout.Padding.Offset
-		end
-		
-		self.Frame.CanvasSize = UDim2.new(0, 0, 0, totalSize + PADDING)
-		
-	end
-	
+
 end
 
 local function mountDownloadsMenu(parentFrame: Frame)
