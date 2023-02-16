@@ -2,7 +2,7 @@
 --!nonstrict
 -- McThor2
 
-local _version = "0.1.0"
+local _version = script.Parent:GetAttribute("version")
 
 local root = script.Parent
 
@@ -69,7 +69,8 @@ local function init()
 
 	GUI.Opened:Connect(function()
 		local packageLocation = Config:GetPackageLocation()
-		print(packageLocation:GetFullName())
+		print( string.format("RPM v%s", _version) )
+		print( "RPM using location: " .. packageLocation:GetFullName())
 	end)
 
 	local placeSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
@@ -77,10 +78,6 @@ local function init()
 	if placeSettings == nil then
 		plugin:SetSetting(RPM_SETTINGS_KEY, {})
 	end
-
-	local packageLocation = Config:GetPackageLocation()
-
-	print(packageLocation:GetFullName())
 
 end
 

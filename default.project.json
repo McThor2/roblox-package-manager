@@ -1,12 +1,7 @@
 {
   "name": "RPM",
   "tree": {
-    "$className": "DataModel",
-
-    "ServerStorage": {
-      "RPM": {
-        "$path": "src"
-      }
-    }
+    "$className": "Folder",
+    "$path": "src"
   }
 }
