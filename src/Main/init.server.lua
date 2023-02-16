@@ -62,17 +62,9 @@ end
 
 local function init()
 
-	print("RPM version v" .. tostring(Version.Value))
-
 	GUI:Init(plugin)
 	GUI:RegisterDownloadCallback(onDownload)
 	GUI:RegisterWallySearch(onWally)
-
-	GUI.Opened:Connect(function()
-		local packageLocation = Config:GetPackageLocation()
-		print( string.format("RPM v%s", Version.Value) )
-		print( "RPM using location: " .. packageLocation:GetFullName())
-	end)
 
 	local placeSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
 
