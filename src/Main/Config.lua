@@ -15,6 +15,9 @@ local LOCATION_LOOKUP = {
 
 Config._decoded = nil
 
+local changedEvent = Instance.new("BindableEvent")
+Config.Changed = changedEvent.Event
+
 local function parseLocation(rawLocation: string)
 
     local tokens = string.split(rawLocation, "/")
@@ -114,6 +117,8 @@ local function init()
         end
 
         Config:Load()
+
+        changedEvent:Fire()
     end)
 
 end

@@ -2,14 +2,13 @@
 --!nonstrict
 -- McThor2
 
-local _version = script.Parent:GetAttribute("version")
-
 local root = script.Parent
 
 local GitHubApi = require(script:WaitForChild("GitHubApi"))
 local WallyApi = require(script:WaitForChild("WallyApi"))
 local GUI = require(script:WaitForChild("GUI"))
 local Config = require(script:WaitForChild("Config"))
+local Version = require(script:WaitForChild("Version"))
 
 local Selection = game:GetService("Selection")
 local ServerStorage = game:GetService("ServerStorage")
@@ -63,7 +62,7 @@ end
 
 local function init()
 
-	print("RPM version v" .. tostring(_version))
+	print("RPM version v" .. tostring(Version.Value))
 
 	GUI:Init(plugin)
 	GUI:RegisterDownloadCallback(onDownload)
@@ -71,7 +70,7 @@ local function init()
 
 	GUI.Opened:Connect(function()
 		local packageLocation = Config:GetPackageLocation()
-		print( string.format("RPM v%s", _version) )
+		print( string.format("RPM v%s", Version.Value) )
 		print( "RPM using location: " .. packageLocation:GetFullName())
 	end)
 
