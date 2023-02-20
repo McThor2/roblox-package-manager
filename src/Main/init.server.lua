@@ -15,14 +15,16 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local RPM_SETTINGS_KEY = "rpm_settings"
 
-local GH_TAG_PATTERN = "^([%w-]+)/([%w-]+)@(%w+.%w+.%w+)$"
+local WALLY_PACKAGE_PATTERN = "^([%w-]+)/([%w-]+)@(%w+.%w+.%w+)$"
 local GH_PATTERN = "^(%a+)/(%a+)$"
 
 local function onDownload(url: string)
 
-	local scope, name, ver = string.match(url, GH_TAG_PATTERN)
+	local scope, name, ver = string.match(url, WALLY_PACKAGE_PATTERN)
 
-	local selected = Selection:Get()
+	if not scope then
+		return
+	end
 
 	local parent = Config:GetPackageLocation()
 	
@@ -38,6 +40,7 @@ local function onDownload(url: string)
 	end
 
 	package.Parent = parent
+	Selection:Add({package})
 end
 
 local function onResultRow(row: GUI.ResultRow)
