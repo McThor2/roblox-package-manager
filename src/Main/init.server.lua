@@ -30,7 +30,7 @@ local function onDownload(url: string)
 	
 	-- TODO: Search for existing package
 
-	local package = WallyApi:GetPackage(scope, name, ver)
+	local package = WallyApi:InstallPackage(scope, name, ver)
 	
 	local metaData = WallyApi:GetMetaData(scope, name)
 	
