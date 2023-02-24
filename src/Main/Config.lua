@@ -23,7 +23,7 @@ Config.Changed = changedEvent.Event
 local function parseLocation(rawLocation: string)
 
     local tokens = string.split(rawLocation, "/")
-    print(tokens)
+    --print(tokens)
 
     local rootLocation = tokens[1]
 
@@ -100,7 +100,7 @@ function Config:GetPackageLocation()
 
     local rawLocation = self:Get("PackageLocation")
 
-    print(rawLocation)
+    --print(rawLocation)
 
     return parseLocation(rawLocation)
 end
