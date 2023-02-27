@@ -3,7 +3,7 @@
   "className": "Folder",
   "properties": {
     "Attributes": {
-      "version": {"String": "0.2.0-alpha.1"}
+      "version": {"String": "0.2.0"}
     }
   }
 }
