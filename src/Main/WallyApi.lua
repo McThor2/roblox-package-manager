@@ -239,6 +239,46 @@ function WallyApi:GetPackage(scope: string, name: string, _version: string): Mod
 	return package
 end
 
+local function getDependencies(dependencies: {string}): {ModuleScript}
+
+	local packages = {}
+	for _, rawDep in dependencies do
+
+		local sharedDep = parseDependency(rawDep)
+
+		local versions = WallyApi:GetPackageVersions(
+			sharedDep.Scope,
+			sharedDep.Name
+		)
+		table.sort(versions, function(a, b)
+			return a > b
+		end)
+
+		local depPackage = nil
+		for _, depVersion in versions do
+
+			if not sharedDep:Check(depVersion) then
+				continue
+			end
+
+			depPackage = WallyApi:GetPackage(
+				sharedDep.Scope,
+				sharedDep.Name,
+				tostring(depVersion)
+			)
+			break
+		end
+
+		if not depPackage then
+			error(`Could not resolve dependency: {sharedDep}`)
+		end
+
+		table.insert(packages, depPackage)
+	end
+
+	return packages
+end
+
 function  WallyApi:InstallPackage(
 	scope: string,
 	name: string,
@@ -268,48 +308,12 @@ function  WallyApi:InstallPackage(
 
 	--print(dependencies)
 
-	local sharedPackages, serverPackages = {}, {}
-	for _, rawDep in dependencies.shared do
-		print(rawDep)
-		local sharedDep = parseDependency(rawDep)
+	local sharedPackages, serverPackages
 
-		local versions = WallyApi:GetPackageVersions(
-			sharedDep.Scope,
-			sharedDep.Name
-		)
-		table.sort(versions, function(a, b)
-			return a > b
-		end)
-		print(versions)
-
-		local depPackage = nil
-		for _, depVersion in versions do
-
-			if not sharedDep:Check(depVersion) then
-				continue
-			end
-
-			depPackage = WallyApi:GetPackage(
-				sharedDep.Scope,
-				sharedDep.Name,
-				tostring(depVersion)
-			)
-			break
-		end
-
-		if not depPackage then
-			error(`Could not resolve dependency: {sharedDep}`)
-		end
-
-		table.insert(sharedPackages, depPackage)
-	end
-
-	for _, rawDep in dependencies.server do
-		local serverDep = parseDependency(rawDep)
-	end
+	sharedPackages = getDependencies(dependencies.shared)
+	serverPackages = getDependencies(dependencies.server)
 
 	local package = WallyApi:GetPackage(scope, name, _version)
-
 
 	return package, sharedPackages, serverPackages
 end
