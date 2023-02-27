@@ -41,7 +41,7 @@ local QUALIFIERS = {
 
 local IGNORE_PATTERNS = {
 	"%.toml$",
-	"%.spec$"
+	"%.spec.lua$"
 }
 
 local Requirement = {}
