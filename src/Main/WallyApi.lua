@@ -40,7 +40,8 @@ local QUALIFIERS = {
 }
 
 local IGNORE_PATTERNS = {
-	"%.toml"
+	"%.toml$",
+	"%.spec$"
 }
 
 local Requirement = {}
@@ -81,9 +82,11 @@ do
 
 end
 
-local function parseDependency(rawDependency: string)
+type Requirement = typeof(Requirement.new())
+
+local function parseDependency(rawDependency: string): Requirement
 	local rawVersions = string.split(rawDependency, "@")
-	local scope, name = string.match(rawVersions[1], "(.)/(.)")
+	local scope, name = string.match(rawVersions[1], "(%l+)/(%l+)")
 	local versionPins = string.split(rawVersions[2], ",")
 
 	local requirements = {}
@@ -114,20 +117,19 @@ local function parseDependency(rawDependency: string)
 	local minEqual, maxEqual
 	for _, req in requirements do
 		if req.qualifier == LE then
-			maxVer = SemVer.fromString(req.version)
+			maxVer = SemVer.fromString(req.version, true)
 			maxEqual = true
-			continue
 		elseif req.qualifier == LT then
-			maxVer = SemVer.fromString(req.version)
+			maxVer = SemVer.fromString(req.version, true)
 			maxEqual = false
 		elseif req.qualifier == GE then
-			minVer = SemVer.fromString(req.version)
+			minVer = SemVer.fromString(req.version, true)
 			minEqual = true
 		elseif req.qualifier == GT then
-			minVer = SemVer.fromString(req.version)
+			minVer = SemVer.fromString(req.version, true)
 			minEqual = false
 		elseif req.qualifier == NE then
-			table.insert(blacklist, SemVer.fromString(req.version))
+			table.insert(blacklist, SemVer.fromString(req.version, true))
 		end
 	end
 
@@ -241,7 +243,7 @@ function  WallyApi:InstallPackage(
 	scope: string,
 	name: string,
 	_version: string,
-	existingPackages: {string}?)
+	existingPackages: {string}?): (ModuleScript?, {ModuleScript}, {ModuleScript})
 
 	existingPackages = existingPackages or {}
 
@@ -265,22 +267,64 @@ function  WallyApi:InstallPackage(
 	end
 
 	--print(dependencies)
-	for _, dep in dependencies.shared do
-		print(dep)
-		local sharedDep = parseDependency(dep)
-		print(sharedDep)
+
+	local sharedPackages, serverPackages = {}, {}
+	for _, rawDep in dependencies.shared do
+		print(rawDep)
+		local sharedDep = parseDependency(rawDep)
+
+		local versions = WallyApi:GetPackageVersions(
+			sharedDep.Scope,
+			sharedDep.Name
+		)
+		table.sort(versions, function(a, b)
+			return a > b
+		end)
+		print(versions)
+
+		local depPackage = nil
+		for _, depVersion in versions do
+
+			if not sharedDep:Check(depVersion) then
+				continue
+			end
+
+			depPackage = WallyApi:GetPackage(
+				sharedDep.Scope,
+				sharedDep.Name,
+				tostring(depVersion)
+			)
+			break
+		end
+
+		if not depPackage then
+			error(`Could not resolve dependency: {sharedDep}`)
+		end
+
+		table.insert(sharedPackages, depPackage)
 	end
 
-	for _, dep in dependencies.server do
-		local serverDep = parseDependency(dep)
-		print(serverDep)
+	for _, rawDep in dependencies.server do
+		local serverDep = parseDependency(rawDep)
 	end
 
 	local package = WallyApi:GetPackage(scope, name, _version)
 
-	local sharedPackages, serverPackages
 
 	return package, sharedPackages, serverPackages
+end
+
+function WallyApi:GetPackageVersions(scope: string, name: string): {SemVer}
+	local metadata = self:GetMetaData(scope, name)
+	local versions = {}
+	for _, versionData in metadata.versions do
+		local semVer = SemVer.fromString(
+			versionData.package.version,
+			true
+		)
+		table.insert(versions, semVer)
+	end
+	return versions
 end
 
 export type VersionMetaData = {

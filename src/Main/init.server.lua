@@ -30,7 +30,7 @@ local function onDownload(url: string)
 	
 	-- TODO: Search for existing package
 
-	local package = WallyApi:InstallPackage(scope, name, ver)
+	local package, sharedPackages, serverPackages = WallyApi:InstallPackage(scope, name, ver)
 	
 	local metaData = WallyApi:GetMetaData(scope, name)
 	
@@ -39,8 +39,20 @@ local function onDownload(url: string)
 		return
 	end
 
+	local installedModules = {package}
 	package.Parent = parent
-	Selection:Add({package})
+
+	for _, depPackage in sharedPackages do
+		depPackage.Parent = parent
+		table.insert(installedModules, depPackage)
+	end
+
+	for _, depPackage in serverPackages do
+		depPackage.Parent = parent
+		table.insert(installedModules, depPackage)
+	end
+
+	Selection:Add(installedModules)
 end
 
 local function onResultRow(row: GUI.ResultRow)
