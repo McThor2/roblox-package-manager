@@ -114,11 +114,17 @@ do
 		return self
 	end
 
-    function SemVer.fromString(a: string)
+    function SemVer.fromString(a: string, strict: boolean)
+
+        strict = strict == nil and false or strict
+
         local major, minor, patch, preRelease, build = string.match(a, SEMVER_PATTERN)
 
         if not (major and minor and patch) then
-            return nil
+            if not strict then
+                return nil
+            end
+            error(`Invalid string input to SemVer - '{a}'`)
         end
 
         preRelease = string.sub(preRelease, 2, #preRelease)
