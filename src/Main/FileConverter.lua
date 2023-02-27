@@ -87,7 +87,7 @@ local function convertDir(virtualPath: VirtualPath, ignorePatterns: {string}?)
 		if not virtualPath:GetChildren() or #virtualPath:GetChildren() == 0 then
 			return
 		end
-	
+
 		dirInstance = Instance.new("Folder")
 	end
 
@@ -96,7 +96,7 @@ local function convertDir(virtualPath: VirtualPath, ignorePatterns: {string}?)
 	-- TODO: Implement meta file usage
 
 	for _, child in virtualPath:GetChildren() do
-		
+
 		-- selene: allow (parenthese_conditions)
 		if (
 			child.path == DIR_LOCAL_SCRIPT or
@@ -110,7 +110,7 @@ local function convertDir(virtualPath: VirtualPath, ignorePatterns: {string}?)
 			continue
 		end
 
-		local childInstance = FileConverter:Convert(child)
+		local childInstance = FileConverter:Convert(child, ignorePatterns)
 		if childInstance then
 			childInstance.Parent = dirInstance
 		end
