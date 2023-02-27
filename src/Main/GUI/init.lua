@@ -1,6 +1,10 @@
 
 local StudioWidgets = require(script:WaitForChild("StudioWidgets"))
 local WallyApi = require(script.Parent:WaitForChild("WallyApi"))
+local Version = require(script.Parent:WaitForChild("Version"))
+local Config = require(script.Parent:WaitForChild("Config"))
+
+local GuiUtilities = StudioWidgets.GuiUtilities
 
 type PackageDescription = WallyApi.PackageDescription
 type PackageMetaData = WallyApi.PackageMetaData
@@ -13,10 +17,10 @@ local WIDGET_TITLE = "RPM"
 
 local ICON_ID = "rbxassetid://12457413905"
 
-local WIDGET_DEFAULT_WIDTH = 300
+local WIDGET_DEFAULT_WIDTH = 375
 local WIDGET_DEFAULT_HEIGHT = 200
 
-local WIDGET_MIN_WIDTH = 300
+local WIDGET_MIN_WIDTH = 375
 local WIDGET_MIN_HEIGHT = 200
 
 local DEFAULT_MENU = "Download"
@@ -101,7 +105,20 @@ local function createSearchEntry(
 	return rootFrame
 end
 
-local function createMenuBar(buttonTexts: {string})
+local function onMenuButton(rootFrame, menuFrames, menuName)
+	return function()
+		local activeFrame = menuFrames[menuName]
+		activeFrame.Parent = rootFrame
+
+		for name, frame in pairs(menuFrames) do
+			if name == menuName then continue end
+
+			frame.Parent = nil
+		end
+	end
+end
+
+local function createMenuBar(buttonTexts: {string}, menuParentFrame: Frame)
 	
 	local rootFrame = blankFrame()
 	rootFrame.AnchorPoint = Vector2.new(0.5,0.5)
@@ -127,8 +144,8 @@ local function createMenuBar(buttonTexts: {string})
 	uiLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	uiLayout.FillDirection = Enum.FillDirection.Horizontal
 	uiLayout.Parent = rootFrame
-	
-	local buttons = {}
+
+	local menuFrames = {}
 	for order, buttonName in ipairs(buttonTexts) do
 		local manualButton = StudioWidgets.CustomTextButton.new(
 			"MenuButton" .. tostring(order + 1),
@@ -139,24 +156,18 @@ local function createMenuBar(buttonTexts: {string})
 		button.Parent = rootFrame
 		button.Size = UDim2.new(0, 100, 1, -10)
 		button.LayoutOrder = order
-		
-		buttons[buttonName] = button
+		button.Activated:Connect(
+			onMenuButton(
+				menuParentFrame,
+				menuFrames,
+				buttonName
+			)
+		)
+
+		menuFrames[buttonName] = blankFrame()
 	end
 	
-	return rootFrame, buttons
-end
-
-local function onMenuButton(rootFrame, menuFrames, menuName)
-	return function()
-		local activeFrame = menuFrames[menuName]
-		activeFrame.Parent = rootFrame
-
-		for name, frame in pairs(menuFrames) do
-			if name == menuName then continue end
-
-			frame.Parent = nil
-		end
-	end
+	return rootFrame, menuFrames
 end
 
 local ResultRow = {}
@@ -278,76 +289,105 @@ export type ResultRow = typeof(ResultRow.new())
 local SearchResults = {}
 do
 	SearchResults.__index = SearchResults
-	
+
 	local PADDING = 5
-	
+
 	function SearchResults.new()
-		
+	
 		local rootFrame = Instance.new("ScrollingFrame")
 		rootFrame.Size = UDim2.new(1,0,1,-40)
 		rootFrame.AnchorPoint = Vector2.new(0.5, 1)
 		rootFrame.Position = UDim2.fromScale(0.5, 1)
 		rootFrame.BackgroundTransparency = 0.9
-		rootFrame.BorderSizePixel = 0
-		
+		rootFrame.BorderSizePixel = 1
+		local shade = 40
+		rootFrame.BorderColor3 = Color3.fromRGB(shade, shade, shade)
+		rootFrame.CanvasSize = UDim2.fromOffset(0,0)
+		rootFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
 		local listLayout = Instance.new("UIListLayout")
 		listLayout.Parent = rootFrame
-		listLayout.Padding = UDim.new(0, 5)
+		listLayout.Padding = UDim.new(0, PADDING)
 		listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		
+
 		local self = {}
 		setmetatable(self, SearchResults)
 		self.Frame = rootFrame
 		self.UILayout = listLayout
-		
-		self._childConnections = {}
-		
-		self.Frame.ChildAdded:Connect(function(child)
-			self:_updateSize()
-			
-			if not child:IsA("GuiObject") then
-				return
-			end
-
-			local connection = child:GetPropertyChangedSignal("Size"):Connect(function()
-				self:_updateSize()
-			end)
-			
-			self._childConnections[child] = connection
-		end)
-		
-		self.Frame.ChildRemoved:Connect(function(child)
-			self:_updateSize()
-			
-			local connection = self._childConnections[child]
-			if connection then
-				connection:Disconnect()
-			end
-			
-		end)
-		
-		self:_updateSize()
 
 		return self
 	end
-	
-	function SearchResults:_updateSize()
-		
-		local totalSize = 0
-		
-		for _, child in self.Frame:GetChildren() do
-			
-			if not child:IsA("GuiObject") then
-				continue
+
+end
+
+local function mountDownloadsMenu(parentFrame: Frame)
+	local downloadFrame = createSearchEntry(
+		"<scope>/<name>@<version>",
+		"Download",
+		function(url)
+			if downloadCallback then
+				downloadCallback(url)
 			end
-			
-			totalSize += child.AbsoluteSize.Y + self.UILayout.Padding.Offset
 		end
-		
-		self.Frame.CanvasSize = UDim2.new(0, 0, 0, totalSize + PADDING)
-		
-	end
+	)
+	downloadFrame.Parent = parentFrame
+end
+
+local function mountSearchMenu(parentFrame: Frame)
+	local wallySearch = createSearchEntry(
+		"search...",
+		"Go",
+		function(text)
+			if wallyCallback then
+				wallyCallback(text)
+			end
+		end
+	)
+	wallySearch.Parent = parentFrame
+
+	local searchResults = SearchResults.new()
+	searchResults.Frame.Parent = wallySearch
 	
+	GUI.SearchResults = searchResults
+end
+
+local function mountSettingsMenu(parentFrame: Frame)
+
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.Parent = parentFrame
+
+	local versionLabel = Instance.new("TextLabel")
+	versionLabel.Size = UDim2.fromOffset(100, 20)
+	versionLabel.BackgroundTransparency = 1
+	versionLabel.TextXAlignment = Enum.TextXAlignment.Left
+	versionLabel.Text = "Version: v" .. Version.Value
+	versionLabel.LayoutOrder = 1
+	versionLabel.Parent = parentFrame
+	GuiUtilities.syncGuiElementFontColor(versionLabel)
+
+	local textFormat = "Packages Location: %s"
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Size = UDim2.fromOffset(100, 20)
+	textLabel.Text = ""
+	textLabel.BackgroundTransparency = 1
+	textLabel.TextXAlignment = Enum.TextXAlignment.Left
+	textLabel.LayoutOrder = 2
+
+	textLabel.Parent = parentFrame
+
+	local function update()
+		local packageLocation = Config:GetPackageLocation()
+		textLabel.Text = string.format(
+			textFormat,
+			packageLocation and packageLocation:GetFullName()
+			or " --- ")
+	end
+
+	Config.Changed:Connect(update)
+	update()
+
+	GuiUtilities.syncGuiElementFontColor(textLabel)
+
 end
 
 function GUI:RegisterWallySearch(callback)
@@ -408,56 +448,20 @@ function GUI:Init(plugin)
 	
 	bottomFrame.Parent = widget
 	
-	local menuFrame, menuButtons = createMenuBar({"Download", "Search Wally"})
+	local menuFrame, menuFrames = createMenuBar(
+		{
+			"Download",
+			"Search Wally",
+			"Settings"
+		},
+		bottomFrame
+	)
 	menuFrame.Parent = topFrame
-	
-	local menuFrames = {}
-	
-	local manualFrame = blankFrame()
-	menuFrames["Download"] = manualFrame
-	
-	local wallyFrame = blankFrame()
-	menuFrames["Search Wally"] = wallyFrame
-	
-	for buttonName, button in pairs(menuButtons) do
-		button.Activated:Connect(
-			onMenuButton(
-				bottomFrame, 
-				menuFrames, 
-				buttonName
-			)
-		)
-	end
-	
-	
-	local downloadFrame = createSearchEntry(
-		"<scope>/<name>@<version>",
-		"Download",
-		function(url)
-			if downloadCallback then
-				downloadCallback(url)
-			end
-		end
-	)
-	downloadFrame.Parent = manualFrame
-	
-	local wallySearch = createSearchEntry(
-		"search...",
-		"Go",
-		function(text)
-			if wallyCallback then
-				wallyCallback(text)
-			end
-		end
-	)
-	wallySearch.Parent = wallyFrame
 
+	mountDownloadsMenu(menuFrames["Download"])
+	mountSearchMenu(menuFrames["Search Wally"])
+	mountSettingsMenu(menuFrames["Settings"])
 
-	local searchResults = SearchResults.new()
-	searchResults.Frame.Parent = wallySearch
-	
-	self.SearchResults = searchResults
-	
 	local defaultFrame = menuFrames[DEFAULT_MENU]
 	defaultFrame.Parent = bottomFrame
 end

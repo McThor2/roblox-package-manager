@@ -13,7 +13,19 @@ Enter the RPM plugin. This allows you to search the full Wally package index fro
 
 ## Installation
 
-You can install the plugin straight from the creator [marketplace](https://create.roblox.com/marketplace/asset/12442691141/Roblox-Package-Manager). Alternatively you can clone the repo, sync into a place and save as a local plugin.
+You can install the plugin straight from the creator [marketplace](https://create.roblox.com/marketplace/asset/12442691141/Roblox-Package-Manager).
+
+Alternatively you can clone the repo, build the plugin using `rojo build` and move to your local plugins folder.
+
+### Windows + PowerShell
+
+For quickly building and re-installing the plugin locally this command has proved useful:
+
+```powershell
+rojo build --output dist/RPM.rbxmx; copy -Force .\dist\RPM.rbxmx $ENV:LOCALAPPDATA\Roblox\Plugins\
+```
+
+Note: ***this will overwrite the existing plugin in your local plugins folder***.
 
 ## Usage
 

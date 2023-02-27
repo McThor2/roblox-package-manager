@@ -5,12 +5,12 @@
 -- Creates a frame containing a label and a text input control.
 --
 ----------------------------------------
-GuiUtilities = require(script.Parent.GuiUtilities)
+local GuiUtilities = require(script.Parent.GuiUtilities)
 
 local kTextInputWidth = 100
 local kTextBoxInternalPadding = 4
 
-LabeledTextInputClass = {}
+local LabeledTextInputClass = {}
 LabeledTextInputClass.__index = LabeledTextInputClass
 
 function LabeledTextInputClass.new(nameSuffix, labelText, defaultValue)
@@ -26,7 +26,7 @@ function LabeledTextInputClass.new(nameSuffix, labelText, defaultValue)
 	
 	self._valueChangedFunction = nil
 
-	local defaultValue = defaultValue or ""
+	defaultValue = defaultValue or ""
 
 	local frame = GuiUtilities.MakeStandardFixedHeightFrame('TextInput ' .. nameSuffix)
 	self._frame = frame
@@ -65,11 +65,11 @@ function LabeledTextInputClass.new(nameSuffix, labelText, defaultValue)
 		-- Never let the text be too long.
 		-- Careful here: we want to measure number of graphemes, not characters, 
 		-- in the text, and we want to clamp on graphemes as well.
-		if (utf8.len(self._textBox.Text) > self._MaxGraphemes) then 
+		if utf8.len(self._textBox.Text) > self._MaxGraphemes then 
 			local count = 0
-			for start, stop in utf8.graphemes(self._textBox.Text) do
+			for start, _ in utf8.graphemes(self._textBox.Text) do
 				count = count + 1
-				if (count > self._MaxGraphemes) then 
+				if count > self._MaxGraphemes then
 					-- We have gone one too far.
 					-- clamp just before the beginning of this grapheme.
 					self._textBox.Text = string.sub(self._textBox.Text, 1, start-1)
@@ -83,7 +83,7 @@ function LabeledTextInputClass.new(nameSuffix, labelText, defaultValue)
 		end
 
 		self._value = self._textBox.Text
-		if (self._valueChangedFunction) then 
+		if self._valueChangedFunction then
 			self._valueChangedFunction(self._value)
 		end
 	end)

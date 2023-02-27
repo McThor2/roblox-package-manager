@@ -6,19 +6,24 @@ local DEFAULT_PACKAGE_LOCATION = "ReplicatedStorage/Packages"
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
 local HttpService = game:GetService("HttpService")
 
 local LOCATION_LOOKUP = {
     ["ReplicatedStorage"] = ReplicatedStorage,
-    ["ServerStorage"] = ServerStorage
+    ["ServerStorage"] = ServerStorage,
+    ["StarterPlayer"] = StarterPlayer
 }
 
 Config._decoded = nil
 
+local changedEvent = Instance.new("BindableEvent")
+Config.Changed = changedEvent.Event
+
 local function parseLocation(rawLocation: string)
 
     local tokens = string.split(rawLocation, "/")
-    print(tokens)
+    --print(tokens)
 
     local rootLocation = tokens[1]
 
@@ -95,7 +100,7 @@ function Config:GetPackageLocation()
 
     local rawLocation = self:Get("PackageLocation")
 
-    print(rawLocation)
+    --print(rawLocation)
 
     return parseLocation(rawLocation)
 end
@@ -103,8 +108,6 @@ end
 local function init()
     
     local placeConfig = Config:Load()
-
-	print(placeConfig)
 
 	if not placeConfig or not placeConfig["PackageLocation"] then
         Config:Set("PackageLocation", DEFAULT_PACKAGE_LOCATION)
@@ -115,9 +118,9 @@ local function init()
             return
         end
 
-        local newConfig = Config:Load()
+        Config:Load()
 
-        print(newConfig)
+        changedEvent:Fire()
     end)
 
 end

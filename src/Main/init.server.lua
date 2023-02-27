@@ -2,34 +2,35 @@
 --!nonstrict
 -- McThor2
 
-local _version = "0.1.0"
-
 local root = script.Parent
 
 local GitHubApi = require(script:WaitForChild("GitHubApi"))
 local WallyApi = require(script:WaitForChild("WallyApi"))
 local GUI = require(script:WaitForChild("GUI"))
 local Config = require(script:WaitForChild("Config"))
+local Version = require(script:WaitForChild("Version"))
 
 local Selection = game:GetService("Selection")
 local ServerStorage = game:GetService("ServerStorage")
 
 local RPM_SETTINGS_KEY = "rpm_settings"
 
-local GH_TAG_PATTERN = "^([%w-]+)/([%w-]+)@(%w+.%w+.%w+)$"
+local WALLY_PACKAGE_PATTERN = "^([%w-]+)/([%w-]+)@(%w+.%w+.%w+)$"
 local GH_PATTERN = "^(%a+)/(%a+)$"
 
 local function onDownload(url: string)
 
-	local scope, name, ver = string.match(url, GH_TAG_PATTERN)
+	local scope, name, ver = string.match(url, WALLY_PACKAGE_PATTERN)
 
-	local selected = Selection:Get()
+	if not scope then
+		return
+	end
 
 	local parent = Config:GetPackageLocation()
 	
 	-- TODO: Search for existing package
 
-	local package = WallyApi:GetPackage(scope, name, ver)
+	local package, sharedPackages, serverPackages = WallyApi:InstallPackage(scope, name, ver)
 	
 	local metaData = WallyApi:GetMetaData(scope, name)
 	
@@ -38,7 +39,20 @@ local function onDownload(url: string)
 		return
 	end
 
+	local installedModules = {package}
 	package.Parent = parent
+
+	for _, depPackage in sharedPackages do
+		depPackage.Parent = parent
+		table.insert(installedModules, depPackage)
+	end
+
+	for _, depPackage in serverPackages do
+		depPackage.Parent = parent
+		table.insert(installedModules, depPackage)
+	end
+
+	Selection:Add(installedModules)
 end
 
 local function onResultRow(row: GUI.ResultRow)
@@ -67,20 +81,11 @@ local function init()
 	GUI:RegisterDownloadCallback(onDownload)
 	GUI:RegisterWallySearch(onWally)
 
-	GUI.Opened:Connect(function()
-		local packageLocation = Config:GetPackageLocation()
-		print(packageLocation:GetFullName())
-	end)
-
 	local placeSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
 
 	if placeSettings == nil then
 		plugin:SetSetting(RPM_SETTINGS_KEY, {})
 	end
-
-	local packageLocation = Config:GetPackageLocation()
-
-	print(packageLocation:GetFullName())
 
 end
 
