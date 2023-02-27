@@ -28,13 +28,15 @@ local GE = ">="
 local LT = "<"
 local LE = "<="
 local EQ = "="
+local NE = "!="
 
 local QUALIFIERS = {
 	[GT] = GT,
 	[GE] = GE,
 	[LT] = LT,
 	[LE] = LE,
-	[EQ] = EQ
+	[EQ] = EQ,
+	[NE] = NE
 }
 
 local IGNORE_PATTERNS = {
@@ -106,20 +108,38 @@ local function parseDependency(rawDependency: string)
 
 	end
 
+	local blacklist = {}
+
 	local minVer, maxVer
+	local minEqual, maxEqual
 	for _, req in requirements do
 		if req.qualifier == LE then
-			maxVer = req.version
+			maxVer = SemVer.fromString(req.version)
+			maxEqual = true
+			continue
+		elseif req.qualifier == LT then
+			maxVer = SemVer.fromString(req.version)
+			maxEqual = false
+		elseif req.qualifier == GE then
+			minVer = SemVer.fromString(req.version)
+			minEqual = true
+		elseif req.qualifier == GT then
+			minVer = SemVer.fromString(req.version)
+			minEqual = false
+		elseif req.qualifier == NE then
+			table.insert(blacklist, SemVer.fromString(req.version))
 		end
 	end
 
-	return {
-		scope = scope,
-		name = name,
-		min = minVer,
-		max = maxVer,
-		blacklist = {}
-	}
+	return Requirement.new(
+		scope,
+		name,
+		minVer,
+		minEqual,
+		maxVer,
+		maxEqual,
+		blacklist
+	)
 end
 
 local filesCache = Cache.new()
