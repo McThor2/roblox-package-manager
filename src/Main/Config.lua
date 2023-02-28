@@ -2,7 +2,12 @@
 local Config = {}
 
 local CONFIG_ATTRIBUTE_NAME = "rpm_config"
+
+local SHARED_PACKAGE_KEY = "PackageLocation"
 local DEFAULT_PACKAGE_LOCATION = "ReplicatedStorage/Packages"
+
+local SERVER_PACKAGE_KEY = "ServerPackageLoction"
+local DEFAULT_SERVER_PACKAGE_LOCATION = "ServerStorage/Packages"
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -92,26 +97,31 @@ function Config:Get(key)
         warn("Config not loaded")
         return nil
     end
-    
+
     return self._decoded[key]
 end
 
 function Config:GetPackageLocation()
+    local rawLocation = self:Get(SHARED_PACKAGE_KEY)
+    return parseLocation(rawLocation)
+end
 
-    local rawLocation = self:Get("PackageLocation")
-
-    --print(rawLocation)
-
+function Config:GetServerPackageLocation()
+    local rawLocation = self:Get(SERVER_PACKAGE_KEY)
     return parseLocation(rawLocation)
 end
 
 local function init()
-    
-    local placeConfig = Config:Load()
 
-	if not placeConfig or not placeConfig["PackageLocation"] then
-        Config:Set("PackageLocation", DEFAULT_PACKAGE_LOCATION)
+    Config:Load()
+
+	if not Config:Get(SHARED_PACKAGE_KEY) then
+        Config:Set(SHARED_PACKAGE_KEY, DEFAULT_PACKAGE_LOCATION)
 	end
+
+    if not Config:Get(SERVER_PACKAGE_KEY) then
+        Config:Set(SERVER_PACKAGE_KEY, DEFAULT_SERVER_PACKAGE_LOCATION)
+    end
 
     ServerStorage.AttributeChanged:Connect(function(attribute)
         if attribute ~= CONFIG_ATTRIBUTE_NAME then
