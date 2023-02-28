@@ -27,13 +27,14 @@ local function onDownload(url: string)
 	end
 
 	local parent = Config:GetPackageLocation()
-	
+	local serverParent = Config:GetServerPackageLocation()
+
 	-- TODO: Search for existing package
 
 	local package, sharedPackages, serverPackages = WallyApi:InstallPackage(scope, name, ver)
-	
+
 	local metaData = WallyApi:GetMetaData(scope, name)
-	
+
 	if not package then
 		warn("Could not download package")
 		return
@@ -48,7 +49,7 @@ local function onDownload(url: string)
 	end
 
 	for _, depPackage in serverPackages do
-		depPackage.Parent = parent
+		depPackage.Parent = serverParent
 		table.insert(installedModules, depPackage)
 	end
 
