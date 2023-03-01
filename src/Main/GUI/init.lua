@@ -365,7 +365,7 @@ local function mountSettingsMenu(parentFrame: Frame)
 	versionLabel.Parent = parentFrame
 	GuiUtilities.syncGuiElementFontColor(versionLabel)
 
-	local textFormat = "Packages Location: %s"
+	local textFormat = "Packages Location: \"%s\""
 	local textLabel = Instance.new("TextLabel")
 	textLabel.Size = UDim2.fromOffset(100, 20)
 	textLabel.Text = ""
@@ -375,18 +375,35 @@ local function mountSettingsMenu(parentFrame: Frame)
 
 	textLabel.Parent = parentFrame
 
+	local serverTextFormat = "Server Packages Location: \"%s\""
+	local serverTextLabel = Instance.new("TextLabel")
+	serverTextLabel.Size = UDim2.fromOffset(100, 20)
+	serverTextLabel.Text = ""
+	serverTextLabel.BackgroundTransparency = 1
+	serverTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+	serverTextLabel.LayoutOrder = 3
+
+	serverTextLabel.Parent = parentFrame
+
 	local function update()
 		local packageLocation = Config:GetPackageLocation()
 		textLabel.Text = string.format(
 			textFormat,
 			packageLocation and packageLocation:GetFullName()
 			or " --- ")
+
+		local serverLocation = Config:GetServerPackageLocation()
+		serverTextLabel.Text = string.format(
+			serverTextFormat,
+			serverLocation and serverLocation:GetFullName()
+			or "---")
 	end
 
 	Config.Changed:Connect(update)
 	update()
 
 	GuiUtilities.syncGuiElementFontColor(textLabel)
+	GuiUtilities.syncGuiElementFontColor(serverTextLabel)
 
 end
 
