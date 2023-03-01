@@ -1,6 +1,8 @@
 
 local HttpService = game:GetService("HttpService")
 
+local GH_PATTERN = "^(%a+)/(%a+)$"
+
 local GitHubApi = {}
 
 GitHubApi.RootPath = "https://api.github.com"
