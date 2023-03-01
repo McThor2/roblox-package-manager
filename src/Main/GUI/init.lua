@@ -389,13 +389,13 @@ local function mountSettingsMenu(parentFrame: Frame)
 		local packageLocation = Config:GetPackageLocation()
 		textLabel.Text = string.format(
 			textFormat,
-			packageLocation and packageLocation:GetFullName()
+			packageLocation and Config:GetRawLocation(packageLocation)
 			or " --- ")
 
 		local serverLocation = Config:GetServerPackageLocation()
 		serverTextLabel.Text = string.format(
 			serverTextFormat,
-			serverLocation and serverLocation:GetFullName()
+			serverLocation and Config:GetRawLocation(serverLocation)
 			or "---")
 	end
 

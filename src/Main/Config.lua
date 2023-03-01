@@ -20,6 +20,15 @@ local LOCATION_LOOKUP = {
     ["StarterPlayer"] = StarterPlayer
 }
 
+local INVERTED_LOCATION_LOOKUP = {}
+for k, v in LOCATION_LOOKUP do
+    assert(
+        INVERTED_LOCATION_LOOKUP[v] == nil,
+        `Multiple locations labels detected for {v}`
+    )
+    INVERTED_LOCATION_LOOKUP[v] = k
+end
+
 Config._decoded = nil
 
 local changedEvent = Instance.new("BindableEvent")
@@ -33,6 +42,10 @@ local function parseLocation(rawLocation: string)
     local rootLocation = tokens[1]
 
     local root = LOCATION_LOOKUP[rootLocation]
+    if not root then
+        error(`Invalid root location for package: \"{rootLocation}\"`)
+    end
+
     local location = root
     for i = 2, #tokens do
         local name = tokens[i]
@@ -99,6 +112,22 @@ function Config:Get(key)
     end
 
     return self._decoded[key]
+end
+
+function Config:GetRawLocation(object: Instance)
+    local result = object.Name
+	object = object.Parent
+	while object and object ~= game do
+		-- Prepend parent name
+		result = object.Name .. "/" .. result
+		-- Go up the hierarchy
+		object = object.Parent
+
+        if object.Parent == game and INVERTED_LOCATION_LOOKUP[object] ~= nil then
+            error(`Invalid root location for package: {object}`)
+        end
+	end
+	return result
 end
 
 function Config:GetPackageLocation()
