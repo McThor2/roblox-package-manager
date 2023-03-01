@@ -146,12 +146,12 @@ end
 
 local filesCache = Cache.new()
 local function getFiles(scope, name, _version)
-	
+
 	local cacheKey = `{scope}/{name}@{_version}`
 	if filesCache:get(cacheKey) then
 		return filesCache:get(cacheKey)
 	end
-	
+
 	local path = DEFAULT_ROOT .. CONTENTS_PATH
 
 	local formattedPath = string.format(path, scope, name, _version)
@@ -164,6 +164,7 @@ local function getFiles(scope, name, _version)
 
 	if response.StatusCode ~= 200 or not response.Success then
 		warn(`RPM HTTP {response.StatusCode} - {response.StatusMessage}`)
+		return
 	end
 
 	local result = VirtualPath.fromZip(response.Body)
@@ -205,6 +206,10 @@ function WallyApi:GetPackage(scope: string, name: string, _version: string): Mod
 
 	-- Get the virtual files object
 	local files = getFiles(scope, name, _version)
+
+	if not files then
+		return
+	end
 
 	-- print("\n" .. tostring(files))
 
