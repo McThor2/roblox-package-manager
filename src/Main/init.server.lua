@@ -80,9 +80,11 @@ end
 
 local function onDownload(inputText: string)
 
+	Logging:Debug(`Download button with '{inputText}'`)
+
 	local scope, name, ver = string.match(inputText, WALLY_PACKAGE_PATTERN)
 
-	if not scope then
+	if not (scope and name and ver) then
 		return
 	end
 
