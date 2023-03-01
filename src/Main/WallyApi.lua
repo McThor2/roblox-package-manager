@@ -5,6 +5,7 @@ local VirtualPath = require(script.Parent:WaitForChild("VirtualPath"))
 local FileConverter = require(script.Parent:WaitForChild("FileConverter"))
 local Cache = require(script.Parent:WaitForChild("Cache"))
 local SemVer = require(script.Parent:WaitForChild("SemVer"))
+local Logging = require(script.Parent:WaitForChild("Logging"))
 
 type SemVer = SemVer.SemVer
 
@@ -94,13 +95,13 @@ local function parseDependency(rawDependency: string): Requirement
 		local rawQual, _ver = string.match(pin, DEP_PATTERN)
 
 		if not _ver then
-			warn(`'{pin}' - Unkown version '{_ver}'`)
+			Logging:Warning(`'{pin}' - Unkown version '{_ver}'`)
 			continue
 		end
 
 		local qualifier = QUALIFIERS[rawQual]
 		if rawQual and not qualifier then
-			warn(`'{pin}' - Unknown qualifier '{rawQual}'`)
+			Logging:Warning(`'{pin}' - Unknown qualifier '{rawQual}'`)
 			continue
 		end
 
@@ -163,7 +164,8 @@ local function getFiles(scope, name, _version)
 	})
 
 	if response.StatusCode ~= 200 or not response.Success then
-		warn(`RPM HTTP {response.StatusCode} - {response.StatusMessage}`)
+		Logging:Warning(`RPM HTTP {response.StatusCode} - {response.StatusMessage}`)
+		Logging:Debug(`{scope}/{name}@{_version}`)
 		return
 	end
 
@@ -275,7 +277,7 @@ local function getDependencies(dependencies: {string}): {ModuleScript}
 		end
 
 		if not depPackage then
-			error(`Could not resolve dependency: {sharedDep}`)
+			Logging:Error(`Could not resolve dependency: {sharedDep}`)
 		end
 
 		table.insert(packages, depPackage)
@@ -295,7 +297,7 @@ function  WallyApi:InstallPackage(
 	local packageMetaData = WallyApi:GetMetaData(scope, name)
 
 	if not packageMetaData then
-		warn(`No metadata for {scope}/{name}`)
+		Logging:Warning(`No metadata for {scope}/{name}`)
 		return
 	end
 
@@ -310,8 +312,6 @@ function  WallyApi:InstallPackage(
 			break
 		end
 	end
-
-	--print(dependencies)
 
 	local sharedPackages, serverPackages
 
