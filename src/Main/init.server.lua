@@ -1,26 +1,86 @@
 
---!nonstrict
 -- McThor2
-
-local root = script.Parent
 
 local GitHubApi = require(script:WaitForChild("GitHubApi"))
 local WallyApi = require(script:WaitForChild("WallyApi"))
 local GUI = require(script:WaitForChild("GUI"))
 local Config = require(script:WaitForChild("Config"))
-local Version = require(script:WaitForChild("Version"))
+local Logging = require(script:WaitForChild("Logging"))
 
 local Selection = game:GetService("Selection")
-local ServerStorage = game:GetService("ServerStorage")
 
 local RPM_SETTINGS_KEY = "rpm_settings"
 
 local WALLY_PACKAGE_PATTERN = "^([%w-]+)/([%w-]+)@(%w+.%w+.%w+)$"
-local GH_PATTERN = "^(%a+)/(%a+)$"
 
-local function onDownload(url: string)
+local function getPackageAttributes(package: Instance)
+	local attributes = {}
+	attributes.Scope = package:GetAttribute("Scope")
+	attributes.Name = package:GetAttribute("Name")
+	attributes.Version = package:GetAttribute("Version")
 
-	local scope, name, ver = string.match(url, WALLY_PACKAGE_PATTERN)
+	return attributes
+end
+
+local function getPackageFromLocation(location: Instance, scope, name, version)
+	for _, child in location:GetChildren() do
+		local attributes = getPackageAttributes(child)
+		if
+			attributes.Scope == scope and
+			attributes.Name == name and
+			attributes.Version == version
+			then return child
+		end
+	end
+	return nil
+end
+
+local function getExistingPackage(scope, name, version)
+
+	local sharedLocation = Config:GetPackageLocation()
+	local serverLocation = Config:GetServerPackageLocation()
+
+	local sharedPackage = getPackageFromLocation(
+		sharedLocation, scope, name, version)
+
+	if sharedPackage then
+		return sharedPackage
+	end
+
+	local serverPackage =  getPackageFromLocation(
+		serverLocation, scope, name, version)
+
+	if serverPackage then
+		return serverPackage
+	end
+
+	return nil
+end
+
+local function installPackages(packages: {Instance}, parent: Instance)
+
+	local installedPackages = {}
+	for _, depPackage in packages do
+
+		local attributes = getPackageAttributes(depPackage)
+		if getExistingPackage(attributes.Scope, attributes.Name, attributes.Version) then
+			Logging:Info(
+				"Dependency already satisfied: "..
+				`{attributes.Scope}/{attributes.Name}@{attributes.Version}`
+			)
+			continue
+		end
+
+		depPackage.Parent = parent
+		table.insert(installedPackages, depPackage)
+	end
+
+	Selection:Add(installedPackages)
+end
+
+local function onDownload(inputText: string)
+
+	local scope, name, ver = string.match(inputText, WALLY_PACKAGE_PATTERN)
 
 	if not scope then
 		return
@@ -33,44 +93,42 @@ local function onDownload(url: string)
 
 	local package, sharedPackages, serverPackages = WallyApi:InstallPackage(scope, name, ver)
 
-	local metaData = WallyApi:GetMetaData(scope, name)
-
 	if not package then
-		warn("Could not download package")
+		Logging:Warning(`Could not download package: {scope}/{name}@{ver}`)
 		return
 	end
 
-	local installedModules = {package}
-	package.Parent = parent
+	local existing = getExistingPackage(scope, name, ver)
 
-	for _, depPackage in sharedPackages do
-		depPackage.Parent = parent
-		table.insert(installedModules, depPackage)
+	if existing then
+		Logging:Info(`Found existing installation of {scope}/{name}@{ver}`)
+	else
+		package.Parent = parent
+		Selection:Add({package})
 	end
 
-	for _, depPackage in serverPackages do
-		depPackage.Parent = serverParent
-		table.insert(installedModules, depPackage)
-	end
+	Logging:Info("Installing dependencies...")
 
-	Selection:Add(installedModules)
+	installPackages(sharedPackages, parent)
+	installPackages(serverPackages, serverParent)
+
 end
 
 local function onResultRow(row: GUI.ResultRow)
-	
-	print(row)
-	
+
+	Logging:Debug(row)
+
 	local scope = row.Description.scope
 	local name = row.Description.name
-	
+
 	if row.MetaData == nil then
-		print("set meta")
+		Logging:Debug("set meta")
 		local metaData = WallyApi:GetMetaData(scope, name)
 		row:SetMetaData(metaData)
 	end
 end
 
-local function onWally(rawText: string)
+local function onWallySearch(rawText: string)
 	local packagesInfo = WallyApi:ListPackages(rawText)
 	GUI:UpdateSearchResults(packagesInfo, onResultRow)
 
@@ -80,11 +138,11 @@ local function init()
 
 	GUI:Init(plugin)
 	GUI:RegisterDownloadCallback(onDownload)
-	GUI:RegisterWallySearch(onWally)
+	GUI:RegisterWallySearch(onWallySearch)
 
-	local placeSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
+	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
 
-	if placeSettings == nil then
+	if pluginSettings == nil then
 		plugin:SetSetting(RPM_SETTINGS_KEY, {})
 	end
 
