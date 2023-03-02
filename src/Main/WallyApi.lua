@@ -1,13 +1,19 @@
 
 local HttpService = game:GetService("HttpService")
 
+local Logging = require(script.Parent:WaitForChild("Logging"))
 local VirtualPath = require(script.Parent:WaitForChild("VirtualPath"))
 local FileConverter = require(script.Parent:WaitForChild("FileConverter"))
 local Cache = require(script.Parent:WaitForChild("Cache"))
-local SemVer = require(script.Parent:WaitForChild("SemVer"))
-local Logging = require(script.Parent:WaitForChild("Logging"))
 
+local SemVer = require(script.Parent:WaitForChild("SemVer"))
 type SemVer = SemVer.SemVer
+
+local Package = require(script.Parent:WaitForChild("Package"))
+type Package = Package.Package
+
+local Requirement = require(script.Parent:WaitForChild("Requirement"))
+type Requirement = Requirement.Requirement
 
 local DEFAULT_ROOT = "https://api.wally.run"
 
@@ -22,128 +28,10 @@ local WALLY_VERSION = "0.3.1"
 
 local WallyApi = {}
 
-local DEP_PATTERN = "([<>=]*)(%d+%.%d+%.%d+)"
-
-local GT = ">"
-local GE = ">="
-local LT = "<"
-local LE = "<="
-local EQ = "="
-local NE = "!="
-
-local QUALIFIERS = {
-	[GT] = GT,
-	[GE] = GE,
-	[LT] = LT,
-	[LE] = LE,
-	[EQ] = EQ,
-	[NE] = NE
-}
-
 local IGNORE_PATTERNS = {
 	"%.toml$",
 	"%.spec.lua$"
 }
-
-local Requirement = {}
-do
-	Requirement.__index = Requirement
-
-	function Requirement.new(
-			scope: string,
-			name: string,
-			min: SemVer,
-			minEqual: boolean,
-			max: SemVer,
-			maxEqual: boolean,
-			blacklist: {SemVer}?)
-
-		local self = {}
-		self.Scope = scope
-		self.Name = name
-		self.Blacklist = blacklist or {}
-
-		self.Min = min
-		self._minEqual = minEqual
-
-		self.Max = max
-		self._maxEqual = maxEqual
-
-		setmetatable(self, Requirement)
-
-		return self
-	end
-
-	function Requirement:Check(version: SemVer)
-		return (
-			((self._minEqual and self.Min <= version) or self.Min < version) and
-			((self._maxEqual and self.Max >= version) or self.Max > version)
-		)
-	end
-
-end
-
-type Requirement = typeof(Requirement.new())
-
-local function parseDependency(rawDependency: string): Requirement
-	local rawVersions = string.split(rawDependency, "@")
-	local scope, name = string.match(rawVersions[1], "(%l+)/(%l+)")
-	local versionPins = string.split(rawVersions[2], ",")
-
-	local requirements = {}
-	for _, pin in versionPins do
-		local rawQual, _ver = string.match(pin, DEP_PATTERN)
-
-		if not _ver then
-			Logging:Warning(`'{pin}' - Unkown version '{_ver}'`)
-			continue
-		end
-
-		local qualifier = QUALIFIERS[rawQual]
-		if rawQual and not qualifier then
-			Logging:Warning(`'{pin}' - Unknown qualifier '{rawQual}'`)
-			continue
-		end
-
-		table.insert(requirements, {
-			qualifier = qualifier,
-			version = _ver
-		})
-
-	end
-
-	local blacklist = {}
-
-	local minVer, maxVer
-	local minEqual, maxEqual
-	for _, req in requirements do
-		if req.qualifier == LE then
-			maxVer = SemVer.fromString(req.version, true)
-			maxEqual = true
-		elseif req.qualifier == LT then
-			maxVer = SemVer.fromString(req.version, true)
-			maxEqual = false
-		elseif req.qualifier == GE then
-			minVer = SemVer.fromString(req.version, true)
-			minEqual = true
-		elseif req.qualifier == GT then
-			minVer = SemVer.fromString(req.version, true)
-			minEqual = false
-		elseif req.qualifier == NE then
-			table.insert(blacklist, SemVer.fromString(req.version, true))
-		end
-	end
-
-	return Requirement.new(
-		scope,
-		name,
-		minVer,
-		minEqual,
-		maxVer,
-		maxEqual,
-		blacklist
-	)
-end
 
 local filesCache = Cache.new()
 local function getFiles(scope, name, _version)
@@ -174,6 +62,15 @@ local function getFiles(scope, name, _version)
 	return result
 end
 
+local function getRequirements(dependencyList: {[string]: string})
+	local requirements = {}
+	for reqName, versionPins in dependencyList do
+		local requirement = Requirement.fromWallyString(reqName, versionPins)
+		table.insert(requirements, requirement)
+	end
+	return requirements
+end
+
 export type PackageDescription = {
 	description: string,
 	name: string,
@@ -200,11 +97,13 @@ function WallyApi:ListPackages(queryPhrase: string?): {PackageDescription}
 
 
 	local packagesData = HttpService:JSONDecode(response.Body)
-	
+
 	return packagesData
 end
 
-function WallyApi:GetPackage(scope: string, name: string, _version: string): ModuleScript?
+function WallyApi:GetPackage(scope: string, name: string, _version: string): Package?
+
+	local packageMetaData = WallyApi:GetVersionMetaData(scope, name, _version)
 
 	-- Get the virtual files object
 	local files = getFiles(scope, name, _version)
@@ -212,8 +111,6 @@ function WallyApi:GetPackage(scope: string, name: string, _version: string): Mod
 	if not files then
 		return
 	end
-
-	-- print("\n" .. tostring(files))
 
 	-- Find directory that corresponds to the package
 	local defaultProjectFile = files / "default.project.json"
@@ -234,6 +131,7 @@ function WallyApi:GetPackage(scope: string, name: string, _version: string): Mod
 	end
 
 	if not package then
+		Logging:Warning(`Unable to convert package to instances - {scope}/{name}@{_version}`)
 		return
 	end
 
@@ -243,7 +141,16 @@ function WallyApi:GetPackage(scope: string, name: string, _version: string): Mod
 	package:SetAttribute("Name", name)
 	package:SetAttribute("Version", _version)
 
-	return package
+	local sharedDependencies = getRequirements(packageMetaData.dependencies)
+	local serverDependencies = getRequirements(packageMetaData["server-dependencies"])
+
+	return Package.new(
+		`{scope}/{name}`,
+		SemVer.fromString(_version),
+		package,
+		sharedDependencies,
+		serverDependencies
+	)
 end
 
 local function getDependencies(dependencies: {string}): {ModuleScript}
@@ -251,7 +158,7 @@ local function getDependencies(dependencies: {string}): {ModuleScript}
 	local packages = {}
 	for _, rawDep in dependencies do
 
-		local sharedDep = parseDependency(rawDep)
+		local sharedDep = Requirement.fromWallyString(rawDep)
 
 		local versions = WallyApi:GetPackageVersions(
 			sharedDep.Scope,
@@ -333,6 +240,9 @@ function WallyApi:GetPackageVersions(scope: string, name: string): {SemVer}
 		)
 		table.insert(versions, semVer)
 	end
+	table.sort(versions, function(a, b)
+		return a > b
+	end)
 	return versions
 end
 
@@ -383,6 +293,19 @@ function WallyApi:GetMetaData(scope: string, name: string): PackageMetaData
 
 	metadataCache:set(cacheKey, metadata)
 	return metadata
+end
+
+function WallyApi:GetVersionMetaData(scope: string, name: string, version: string): VersionMetaData?
+
+	local allMetaData = WallyApi:GetMetaData(scope, name)
+
+	for _, versionData in allMetaData.versions do
+		if versionData.package.version == version then
+			return versionData
+		end
+	end
+
+	return nil
 end
 
 return WallyApi
