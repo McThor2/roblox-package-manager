@@ -60,16 +60,6 @@ end
 
 local function init()
 
-	GUI:Init(plugin)
-	GUI:RegisterDownloadCallback(onDownload)
-	GUI:RegisterWallySearch(onWallySearch)
-
-	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
-
-	if pluginSettings == nil then
-		plugin:SetSetting(RPM_SETTINGS_KEY, {})
-	end
-
 	Logging:SetRootInstance(script.Parent)
 
 	if not Config:Get("Logging Level") then
@@ -80,6 +70,16 @@ local function init()
 		Logging:SetLevel(Config:Get("Logging Level"))
 	end)
 	Logging:SetLevel(Config:Get("Logging Level"))
+
+	GUI:Init(plugin)
+	GUI:RegisterDownloadCallback(onDownload)
+	GUI:RegisterWallySearch(onWallySearch)
+
+	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
+
+	if pluginSettings == nil then
+		plugin:SetSetting(RPM_SETTINGS_KEY, {})
+	end
 
 end
 
