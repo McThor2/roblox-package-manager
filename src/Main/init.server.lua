@@ -24,9 +24,6 @@ local function onDownload(inputText: string)
 		return
 	end
 
-	local parent = Config:GetPackageLocation()
-	local serverParent = Config:GetServerPackageLocation()
-
 	-- TODO: Search for existing package
 
 	local package = WallyApi:GetPackage(scope, name, ver)
@@ -36,7 +33,7 @@ local function onDownload(inputText: string)
 		return
 	end
 
-	local installedPackages = PackageManager:InstallPackages({package}, parent, serverParent)
+	local installedPackages = PackageManager:InstallPackages({package})
 	Logging:Info("Installed", installedPackages)
 	Selection:Add(installedPackages)
 end
