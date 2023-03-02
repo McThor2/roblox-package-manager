@@ -65,7 +65,7 @@ local function getExistingPackage(scope, name, version)
 	return nil
 end
 
-local function resolveRequirements(requirements: {Requirement}, parent: Instance)
+local function resolveRequirements(requirements: {Requirement})
 
 	local installedPackages = {}
 	for _, requirement in requirements do
@@ -105,10 +105,9 @@ local function resolveRequirements(requirements: {Requirement}, parent: Instance
 			tostring(installVersion)
 		)
 
-		PackageManager:InstallPackages({package})
+		local installedDeps = PackageManager:InstallPackages({package})
 
-		package.Instance.Parent = parent
-		table.insert(installedPackages, package.Instance)
+		installedPackages = join(installedPackages, installedDeps)
 	end
 
 	return installedPackages
@@ -121,8 +120,11 @@ function PackageManager:InstallPackages(packages: {Package})
 
 	local installedPackages = {}
 	for _, package in packages do
-		local sharedDeps = resolveRequirements(package.SharedDependencies, sharedParent)
-		local serverDeps = resolveRequirements(package.ServerDependencies, serverParent)
+
+        Logging:Info(`Installing {package}`)
+
+		local sharedDeps = resolveRequirements(package.SharedDependencies)
+		local serverDeps = resolveRequirements(package.ServerDependencies)
 
 		installedPackages = join(installedPackages, sharedDeps)
 		installedPackages = join(installedPackages, serverDeps)
