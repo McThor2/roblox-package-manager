@@ -6,10 +6,20 @@ Logging.WARNING = 3
 Logging.ERROR = 4
 
 local currentLevel = 1
+local rootInstance = nil
 
 local Logger = {}
 do
     Logger.__index = Logger
+
+    local function formatSource(source: string)
+        if rootInstance == nil then
+            return source
+        end
+
+        local split = string.split(source, rootInstance:GetFullName() .. ".")
+        return split[2]
+    end
 
     function Logger.new(name: string)
         local self = {}
@@ -21,6 +31,7 @@ do
         debugLevel = debugLevel or 2
         local line = debug.info(debugLevel, "l")
         local source = debug.info(debugLevel, "s")
+        source = formatSource(source)
         local funcName = debug.info(debugLevel, "n")
         local debugInfo = `{source}, Line {line}`
 
@@ -76,6 +87,10 @@ end
 
 function Logging:SetLevel(level: number)
     currentLevel = level
+end
+
+function Logging:SetRootInstance(instance: Instance?)
+    rootInstance = instance
 end
 
 function Logging:Debug(msg)
