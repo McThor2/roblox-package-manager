@@ -8,11 +8,18 @@ type Requirement = Requirement.Requirement
 local Package = {}
 Package.__index = Package
 
+export type SHARED = "shared"
+export type SERVER = "server"
+
+Package.SHARED = "shared" :: SHARED
+Package.SERVER = "server" :: SERVER
+
 function Package.new(
     scope: string,
     name: string,
     version: SemVer,
     instance: Instance,
+    location: SHARED | SERVER,
     sharedDependencies: {Requirement}?,
     serverDependencies: {Requirement}?)
 
@@ -24,6 +31,7 @@ function Package.new(
     self.Name = name
     self.Version = version
     self.Instance = instance
+    self.Location = location
     self.SharedDependencies = sharedDependencies
     self.ServerDependencies = serverDependencies
     setmetatable(self, Package)
