@@ -145,7 +145,8 @@ function WallyApi:GetPackage(scope: string, name: string, _version: string): Pac
 	local serverDependencies = getRequirements(packageMetaData["server-dependencies"])
 
 	return Package.new(
-		`{scope}/{name}`,
+		scope,
+		name,
 		SemVer.fromString(_version),
 		package,
 		sharedDependencies,

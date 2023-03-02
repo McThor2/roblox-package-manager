@@ -9,6 +9,7 @@ local Package = {}
 Package.__index = Package
 
 function Package.new(
+    scope: string,
     name: string,
     version: SemVer,
     instance: Instance,
@@ -19,6 +20,7 @@ function Package.new(
     serverDependencies = serverDependencies or {}
 
     local self = {}
+    self.Scope = scope
     self.Name = name
     self.Version = version
     self.Instance = instance
@@ -26,6 +28,10 @@ function Package.new(
     self.ServerDependencies = serverDependencies
     setmetatable(self, Package)
     return self
+end
+
+function Package:__tostring()
+    return `{self.Scope}/{self.Name}@{self.Version}`
 end
 
 export type Package = typeof(Package.new())
