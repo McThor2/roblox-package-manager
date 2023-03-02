@@ -31,7 +31,7 @@ function Package.new(
     self.Name = name
     self.Version = version
     self.Instance = instance
-    self.Location = location
+    self.Location = location or Package.SHARED
     self.SharedDependencies = sharedDependencies
     self.ServerDependencies = serverDependencies
     setmetatable(self, Package)
