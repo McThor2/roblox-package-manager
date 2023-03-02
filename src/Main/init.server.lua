@@ -1,11 +1,13 @@
 
 -- McThor2
 
-local GitHubApi = require(script:WaitForChild("GitHubApi"))
 local WallyApi = require(script:WaitForChild("WallyApi"))
 local GUI = require(script:WaitForChild("GUI"))
 local Config = require(script:WaitForChild("Config"))
+local Requirement = require(script:WaitForChild("Requirement"))
 local Logging = require(script:WaitForChild("Logging"))
+
+type Requirement = Requirement.Requirement
 
 local Selection = game:GetService("Selection")
 
@@ -57,22 +59,48 @@ local function getExistingPackage(scope, name, version)
 	return nil
 end
 
-local function installPackages(packages: {Instance}, parent: Instance)
+local function installPackages(requirements: {Requirement}, parent: Instance)
 
 	local installedPackages = {}
-	for _, depPackage in packages do
+	for _, requirement in requirements do
 
-		local attributes = getPackageAttributes(depPackage)
-		if getExistingPackage(attributes.Scope, attributes.Name, attributes.Version) then
+		local availableVersions = WallyApi:GetPackageVersions(
+			requirement.Scope,
+			requirement.Name
+		)
+
+		Logging:Debug(`Checking versions for {requirement.Scope}/{requirement.Name}`)
+		Logging:Debug(availableVersions)
+
+		local installVersion = nil
+		for _, _ver in availableVersions do
+			if requirement:Check(_ver) then
+				installVersion = _ver
+				break
+			end
+		end
+
+		if not installVersion then
+			Logging:Warning(`Could not satisfy requirement - {requirement}`)
+			continue
+		end
+
+		if getExistingPackage(requirement.Scope, requirement.Name, tostring(installVersion)) then
 			Logging:Info(
 				"Dependency already satisfied: "..
-				`{attributes.Scope}/{attributes.Name}@{attributes.Version}`
+				`{requirement.Scope}/{requirement.Name}@{installVersion}`
 			)
 			continue
 		end
 
-		depPackage.Parent = parent
-		table.insert(installedPackages, depPackage)
+		local package = WallyApi:GetPackage(
+			requirement.Scope,
+			requirement.Name,
+			tostring(installVersion)
+		)
+
+		package.Instance.Parent = parent
+		table.insert(installedPackages, package.Instance)
 	end
 
 	Selection:Add(installedPackages)
@@ -93,7 +121,7 @@ local function onDownload(inputText: string)
 
 	-- TODO: Search for existing package
 
-	local package, sharedPackages, serverPackages = WallyApi:InstallPackage(scope, name, ver)
+	local package = WallyApi:GetPackage(scope, name, ver)
 
 	if not package then
 		Logging:Warning(`Could not download package: {scope}/{name}@{ver}`)
@@ -105,14 +133,14 @@ local function onDownload(inputText: string)
 	if existing then
 		Logging:Info(`Found existing installation of {scope}/{name}@{ver}`)
 	else
-		package.Parent = parent
-		Selection:Add({package})
+		package.Instance.Parent = parent
+		Selection:Add({package.Instance})
 	end
 
 	Logging:Info("Installing dependencies...")
 
-	installPackages(sharedPackages, parent)
-	installPackages(serverPackages, serverParent)
+	installPackages(package.SharedDependencies, parent)
+	installPackages(package.ServerDependencies, serverParent)
 
 end
 
@@ -147,6 +175,8 @@ local function init()
 	if pluginSettings == nil then
 		plugin:SetSetting(RPM_SETTINGS_KEY, {})
 	end
+
+	Logging:SetRootInstance(script.Parent)
 
 end
 
