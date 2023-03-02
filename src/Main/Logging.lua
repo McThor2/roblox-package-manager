@@ -8,6 +8,8 @@ Logging.ERROR = 4
 local currentLevel = 1
 local rootInstance = nil
 
+local DEFAULT_PREFIX = "root"
+
 local Logger = {}
 do
     Logger.__index = Logger
@@ -17,8 +19,12 @@ do
             return source
         end
 
-        local split = string.split(source, rootInstance:GetFullName() .. ".")
+        local split = string.split(source, rootInstance.Parent:GetFullName() .. ".")
         return split[2]
+    end
+
+    local function getPrefix()
+        return `[{rootInstance and rootInstance.Name or DEFAULT_PREFIX}]`
     end
 
     function Logger.new(name: string)
@@ -50,14 +56,16 @@ do
         if currentLevel > Logging.INFO then
             return
         end
-        print(...)
+        local prefix = getPrefix()
+        print(prefix, ...)
     end
 
     function Logger:Warning(...)
         if currentLevel > Logging.WARNING then
             return
         end
-        warn(...)
+        local prefix = getPrefix()
+        warn(prefix, ...)
     end
 
     function Logger:Error(...)
