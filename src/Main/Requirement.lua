@@ -27,6 +27,7 @@ local QUALIFIERS = {
 
 
 function Requirement.new(
+        reqName: string,
         scope: string,
         name: string,
         min: SemVer,
@@ -36,6 +37,7 @@ function Requirement.new(
         blacklist: {SemVer}?)
 
     local self = {}
+    self.ReqName = reqName
     self.Scope = scope
     self.Name = name
     self.Blacklist = blacklist or {}
@@ -51,7 +53,7 @@ function Requirement.new(
     return self
 end
 
-function Requirement.fromWallyString(rawDependency: string): Requirement
+function Requirement.fromWallyString(reqName: string, rawDependency: string): Requirement
     local rawVersions = string.split(rawDependency, "@")
     local scope, name = string.match(rawVersions[1], "(%l+)/(%l+)")
     local versionPins = string.split(rawVersions[2], ",")
@@ -101,6 +103,7 @@ function Requirement.fromWallyString(rawDependency: string): Requirement
     end
 
     return Requirement.new(
+        reqName,
         scope,
         name,
         minVer,
