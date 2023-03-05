@@ -1,6 +1,7 @@
 
 local Config = {}
 
+local CONFIG_INSTANCE_NAME = "RPM-Config"
 local CONFIG_ATTRIBUTE_NAME = "rpm_config"
 
 local SHARED_PACKAGE_KEY = "PackageLocation"
@@ -61,8 +62,38 @@ local function parseLocation(rawLocation: string)
     return location
 end
 
+local function createConfiguration()
+    local newConfiguration = Instance.new("Configuration")
+    newConfiguration.Name = CONFIG_INSTANCE_NAME
+    return newConfiguration
+end
+
+local function getConfiguration()
+    local existingConfiguration = ServerStorage:FindFirstChild(CONFIG_INSTANCE_NAME)
+    if existingConfiguration then
+        return existingConfiguration
+    end
+
+    local newConfig = createConfiguration()
+    newConfig.Parent = ServerStorage
+    return newConfig
+end
+
+function Config:Save()
+    local configInstance = getConfiguration()
+
+    local encodedConfig = HttpService:JSONEncode(self._decoded)
+
+    print("set", encodedConfig)
+    configInstance:SetAttribute(
+        CONFIG_ATTRIBUTE_NAME,
+        encodedConfig
+    )
+end
+
 function Config:Load()
-    local rawConfig = ServerStorage:GetAttribute(CONFIG_ATTRIBUTE_NAME)
+    local configInstance = getConfiguration()
+    local rawConfig = configInstance:GetAttribute(CONFIG_ATTRIBUTE_NAME)
 
     rawConfig = rawConfig or "{}"
 
@@ -76,7 +107,7 @@ function Config:Load()
         return
     end
 
-    Config._decoded = config
+    self._decoded = config
 
     return config
 end
@@ -84,8 +115,6 @@ end
 function Config:Set(key, value)
 
     local config = self._decoded
-
-    config[key] = value
 
     local success, encodedConfig = pcall(function()
         return HttpService:JSONEncode(config)
@@ -97,11 +126,9 @@ function Config:Set(key, value)
         return
     end
 
-    print("set", encodedConfig)
-    ServerStorage:SetAttribute(
-        CONFIG_ATTRIBUTE_NAME,
-        encodedConfig
-    )
+    config[key] = value
+
+    Config:Save()
 end
 
 function Config:Get(key)
@@ -140,6 +167,16 @@ function Config:GetServerPackageLocation()
     return parseLocation(rawLocation)
 end
 
+local function onUpdate(attribute)
+    if attribute ~= CONFIG_ATTRIBUTE_NAME then
+        return
+    end
+
+    Config:Load()
+
+    changedEvent:Fire()
+end
+
 local function init()
 
     Config:Load()
@@ -152,15 +189,8 @@ local function init()
         Config:Set(SERVER_PACKAGE_KEY, DEFAULT_SERVER_PACKAGE_LOCATION)
     end
 
-    ServerStorage.AttributeChanged:Connect(function(attribute)
-        if attribute ~= CONFIG_ATTRIBUTE_NAME then
-            return
-        end
-
-        Config:Load()
-
-        changedEvent:Fire()
-    end)
+    local configInstance = getConfiguration()
+    configInstance.AttributeChanged:Connect(onUpdate)
 
 end
 
