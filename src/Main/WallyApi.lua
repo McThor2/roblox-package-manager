@@ -7,6 +7,7 @@ local Cache = require(script.Parent:WaitForChild("Cache"))
 local PackageManager = require(script.Parent.PackageManager)
 
 type VirtualPath = VirtualPath.VirtualPath
+type VersionMetaData = PackageManager.VersionMetaData
 
 local SemVer = require(script.Parent:WaitForChild("SemVer"))
 type SemVer = SemVer.SemVer
@@ -126,27 +127,6 @@ function WallyApi:GetPackageVersions(scope: string, name: string): {SemVer}
 	end)
 	return versions
 end
-
-export type VersionMetaData = {
-	dependencies: {[string]: string},
-	["server-dependencies"]: {[string]: string},
-	["dev-dependencies"]: {[string]: string},
-	package: {
-		authors: {string},
-		description: string?,
-		exclude: {string},
-		include: {string},
-		license: string?,
-		name: string,
-		realm: "shared" | "server",
-		registry: string,
-		version: string
-	},
-	place: {
-		["shared-packages"]: string?,
-		["server-packages"]: string?
-	}
-}
 
 export type PackageMetaData = {
 	versions: {
