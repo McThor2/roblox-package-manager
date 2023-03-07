@@ -81,13 +81,18 @@ function VirtualPath:Make()
 end
 
 function VirtualPath:__tostring()
-	
+
 	local pathString = self:GetAbsolutePath()
-	
+
 	for _, child in self.children do
-		pathString = pathString .. "\n" .. tostring(child)
+		pathString = pathString .. "\n" .. child:GetAbsolutePath()
+		if child:IsDir() then
+			pathString ..= "/"
+		end
 	end
-	
+
+	pathString = "<VirtualPath>\n" .. pathString .. "\n</VirtualPath>"
+
 	return pathString
 end
 
