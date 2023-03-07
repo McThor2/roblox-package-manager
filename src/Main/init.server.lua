@@ -88,6 +88,10 @@ local function init()
 
 		Logging:Debug(file)
 
+		if not file then
+			return
+		end
+
 		local installedPackage = PackageManager:InstallArchive(file)
 		Selection:Add({installedPackage})
 	end)
