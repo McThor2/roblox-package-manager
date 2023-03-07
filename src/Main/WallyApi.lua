@@ -3,8 +3,10 @@ local HttpService = game:GetService("HttpService")
 
 local Logging = require(script.Parent:WaitForChild("Logging"))
 local VirtualPath = require(script.Parent:WaitForChild("VirtualPath"))
-local FileConverter = require(script.Parent:WaitForChild("FileConverter"))
 local Cache = require(script.Parent:WaitForChild("Cache"))
+local PackageManager = require(script.Parent.PackageManager)
+
+type VirtualPath = VirtualPath.VirtualPath
 
 local SemVer = require(script.Parent:WaitForChild("SemVer"))
 type SemVer = SemVer.SemVer
@@ -28,13 +30,9 @@ local WALLY_VERSION = "0.3.1"
 
 local WallyApi = {}
 
-local IGNORE_PATTERNS = {
-	"%.toml$",
-	"%.spec.lua$"
-}
 
 local filesCache = Cache.new()
-local function getFiles(scope, name, _version)
+local function getFiles(scope, name, _version): VirtualPath?
 
 	local cacheKey = `{scope}/{name}@{_version}`
 	if filesCache:get(cacheKey) then
@@ -62,14 +60,6 @@ local function getFiles(scope, name, _version)
 	return result
 end
 
-local function getRequirements(dependencyList: {[string]: string})
-	local requirements = {}
-	for reqName, versionPins in dependencyList do
-		local requirement = Requirement.fromWallyString(reqName, versionPins)
-		table.insert(requirements, requirement)
-	end
-	return requirements
-end
 
 export type PackageDescription = {
 	description: string,
@@ -112,46 +102,12 @@ function WallyApi:GetPackage(scope: string, name: string, _version: string): Pac
 		return
 	end
 
-	-- Find directory that corresponds to the package
-	local defaultProjectFile = files / "default.project.json"
-
-	-- Turn Virtual Files into Roblox Instances
-
-	local package
-	if defaultProjectFile:IsFile() then
-		local defaultProject = HttpService:JSONDecode(defaultProjectFile:Read())
-		local packageDir = defaultProject["tree"]["$path"]
-		package = FileConverter:Convert(
-			files / packageDir,
-			IGNORE_PATTERNS)
-	else
-		package = FileConverter:Convert(
-			files,
-			IGNORE_PATTERNS)
-	end
-
-	if not package then
-		Logging:Warning(`Unable to convert package to instances - {scope}/{name}@{_version}`)
-		return
-	end
-
-	package.Name = string.sub(name, 1, 1):upper() .. string.sub(name, 2, #name)
-
-	package:SetAttribute("Scope", scope)
-	package:SetAttribute("Name", name)
-	package:SetAttribute("Version", _version)
-
-	local sharedDependencies = getRequirements(packageMetaData.dependencies)
-	local serverDependencies = getRequirements(packageMetaData["server-dependencies"])
-
-	return Package.new(
+	return PackageManager:GetPackageFromPath(
+		files,
 		scope,
 		name,
-		SemVer.fromString(_version),
-		package,
-		nil,
-		sharedDependencies,
-		serverDependencies
+		_version,
+		packageMetaData
 	)
 end
 

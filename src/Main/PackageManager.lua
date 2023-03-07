@@ -1,15 +1,26 @@
 
+local HttpService = game:GetService("HttpService")
 
-local WallyApi = require(script.Parent:WaitForChild("WallyApi"))
 local Config = require(script.Parent:WaitForChild("Config"))
 local Requirement = require(script.Parent:WaitForChild("Requirement"))
 local Package = require(script.Parent:WaitForChild("Package"))
 local Logging = require(script.Parent:WaitForChild("Logging"))
+local FileConverter = require(script.Parent:WaitForChild("FileConverter"))
+local SemVer = require(script.Parent:WaitForChild("SemVer"))
+local VirtualPath = require(script.Parent:WaitForChild("VirtualPath"))
 
+type VirtualPath = VirtualPath.VirtualPath
+type SemVer = SemVer.SemVer
 type Package = Package.Package
 type Requirement = Requirement.Requirement
 
 local PackageManager = {}
+
+
+local IGNORE_PATTERNS = {
+	"%.toml$",
+	"%.spec.lua$"
+}
 
 local function join(a, b)
 	local result = table.clone(a)
@@ -41,8 +52,6 @@ local function getPackageFromLocation(location: Instance, scope, name, version)
 	return nil
 end
 
-
-
 local function getExistingPackage(scope, name, version)
 
 	local sharedLocation = Config:GetPackageLocation()
@@ -65,12 +74,24 @@ local function getExistingPackage(scope, name, version)
 	return nil
 end
 
-local function resolveRequirements(requirements: {Requirement})
+local function getRequirements(dependencyList: {[string]: string})
+	local requirements = {}
+	for reqName, versionPins in dependencyList do
+		local requirement = Requirement.fromWallyString(reqName, versionPins)
+		table.insert(requirements, requirement)
+	end
+	return requirements
+end
+
+local function resolveRequirements(
+	requirements: {Requirement},
+	metaDataStore,
+	packageStore)
 
 	local installedPackages = {}
 	for _, requirement in requirements do
 
-		local availableVersions = WallyApi:GetPackageVersions(
+		local availableVersions = metaDataStore(
 			requirement.Scope,
 			requirement.Name
 		)
@@ -99,7 +120,7 @@ local function resolveRequirements(requirements: {Requirement})
 			continue
 		end
 
-		local package = WallyApi:GetPackage(
+		local package = packageStore(
 			requirement.Scope,
 			requirement.Name,
 			tostring(installVersion)
@@ -113,7 +134,61 @@ local function resolveRequirements(requirements: {Requirement})
 	return installedPackages
 end
 
-function PackageManager:InstallPackages(packages: {Package})
+function PackageManager:GetPackageFromPath(
+	virtualPath: VirtualPath,
+	scope: string,
+	name: string,
+	_version: string,
+	packageMetaData)
+
+	-- Find directory that corresponds to the package
+	local defaultProjectFile = virtualPath / "default.project.json"
+
+	-- Turn Virtual Files into Roblox Instances
+
+	local package
+	if defaultProjectFile:IsFile() then
+		local defaultProject = HttpService:JSONDecode(defaultProjectFile:Read())
+		local packageDir = defaultProject["tree"]["$path"]
+		package = FileConverter:Convert(
+			virtualPath / packageDir,
+			IGNORE_PATTERNS)
+	else
+		package = FileConverter:Convert(
+			virtualPath,
+			IGNORE_PATTERNS)
+	end
+
+	if not package then
+		Logging:Warning(`Unable to convert package to instances - {scope}/{name}@{_version}`)
+		return
+	end
+
+	package.Name = string.sub(name, 1, 1):upper() .. string.sub(name, 2, #name)
+
+	package:SetAttribute("Scope", scope)
+	package:SetAttribute("Name", name)
+	package:SetAttribute("Version", _version)
+
+	local sharedDependencies = getRequirements(packageMetaData.dependencies)
+	local serverDependencies = getRequirements(packageMetaData["server-dependencies"])
+
+	return Package.new(
+		scope,
+		name,
+		SemVer.fromString(_version),
+		package,
+		nil,
+		sharedDependencies,
+		serverDependencies
+	)
+end
+
+function PackageManager:InstallPackages(
+	packages: {Package},
+	metaDataStore,
+	packageStore
+	)
 
     local sharedParent = Config:GetPackageLocation()
     local serverParent = Config:GetServerPackageLocation()
@@ -123,8 +198,8 @@ function PackageManager:InstallPackages(packages: {Package})
 
         Logging:Info(`Installing {package}`)
 
-		local sharedDeps = resolveRequirements(package.SharedDependencies)
-		local serverDeps = resolveRequirements(package.ServerDependencies)
+		local sharedDeps = resolveRequirements(package.SharedDependencies, metaDataStore, packageStore)
+		local serverDeps = resolveRequirements(package.ServerDependencies, metaDataStore, packageStore)
 
 		installedPackages = join(installedPackages, sharedDeps)
 		installedPackages = join(installedPackages, serverDeps)
@@ -139,6 +214,14 @@ function PackageManager:InstallPackages(packages: {Package})
 	end
 
 	return installedPackages
+end
+
+function PackageManager:InstallArchive(file: File)
+
+	local content = file:GetBinaryContents()
+
+
+
 end
 
 return PackageManager

@@ -7,7 +7,7 @@ local Config = require(script:WaitForChild("Config"))
 local PackageManager = require(script:WaitForChild("PackageManager"))
 local Logging = require(script:WaitForChild("Logging"))
 
-
+local StudioService = game:GetService("StudioService")
 local Selection = game:GetService("Selection")
 
 local RPM_SETTINGS_KEY = "rpm_settings"
@@ -33,7 +33,15 @@ local function onDownload(inputText: string)
 		return
 	end
 
-	local installedPackages = PackageManager:InstallPackages({package})
+	local installedPackages = PackageManager:InstallPackages(
+		{package},
+		function(...)
+			return WallyApi:GetPackageVersions(...)
+		end,
+		function(...)
+			return WallyApi:GetPackage(...)
+		end
+	)
 	Logging:Info("Installed", installedPackages)
 	Selection:Add(installedPackages)
 end
@@ -74,6 +82,14 @@ local function init()
 	GUI:Init(plugin)
 	GUI:RegisterDownloadCallback(onDownload)
 	GUI:RegisterWallySearch(onWallySearch)
+
+	GUI.BrowseActivated:Connect(function()
+		local file = StudioService:PromptImportFile({"zip", "gz"})
+
+		Logging:Debug(file)
+
+		PackageManager:InstallArchive(file)
+	end)
 
 	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
 
