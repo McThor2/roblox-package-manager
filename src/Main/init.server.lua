@@ -88,7 +88,8 @@ local function init()
 
 		Logging:Debug(file)
 
-		PackageManager:InstallArchive(file)
+		local installedPackage = PackageManager:InstallArchive(file)
+		Selection:Add({installedPackage})
 	end)
 
 	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
