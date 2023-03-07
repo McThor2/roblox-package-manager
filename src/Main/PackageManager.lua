@@ -8,11 +8,33 @@ local Logging = require(script.Parent:WaitForChild("Logging"))
 local FileConverter = require(script.Parent:WaitForChild("FileConverter"))
 local SemVer = require(script.Parent:WaitForChild("SemVer"))
 local VirtualPath = require(script.Parent:WaitForChild("VirtualPath"))
+local Toml = require(script.Parent.Toml)
 
 type VirtualPath = VirtualPath.VirtualPath
 type SemVer = SemVer.SemVer
 type Package = Package.Package
 type Requirement = Requirement.Requirement
+
+export type VersionMetaData = {
+	dependencies: {[string]: string},
+	["server-dependencies"]: {[string]: string},
+	["dev-dependencies"]: {[string]: string},
+	package: {
+		authors: {string},
+		description: string?,
+		exclude: {string},
+		include: {string},
+		license: string?,
+		name: string,
+		realm: "shared" | "server",
+		registry: string,
+		version: string
+	},
+	place: {
+		["shared-packages"]: string?,
+		["server-packages"]: string?
+	}
+}
 
 local PackageManager = {}
 
@@ -188,7 +210,7 @@ function PackageManager:InstallPackages(
 	packages: {Package},
 	metaDataStore,
 	packageStore
-	)
+	): {Instance}
 
     local sharedParent = Config:GetPackageLocation()
     local serverParent = Config:GetServerPackageLocation()
@@ -219,9 +241,37 @@ end
 function PackageManager:InstallArchive(file: File)
 
 	local content = file:GetBinaryContents()
+	local path = VirtualPath.fromZip(content)
 
+	local wallyFile = path / "wally.toml"
+	local rawMetaData = wallyFile:IsFile() and wallyFile:Read()
 
+	if not rawMetaData then
+		return
+	end
 
+	local metaData = Toml.parse(rawMetaData)
+	Logging:Debug(metaData)
+
+	local scope, name = table.unpack(string.split(metaData["package"]["name"], "/"))
+	local _version = metaData["package"]["version"]
+
+	local packageMetaData = {}
+
+	packageMetaData.dependencies = metaData["dependencies"]
+	packageMetaData["server-dependencies"] = {}
+
+	local package = PackageManager:GetPackageFromPath(
+		path,
+		scope,
+		name,
+		_version,
+		packageMetaData
+	)
+
+	package.Instance.Parent = Config:GetPackageLocation()
+
+	return package.Instance
 end
 
 return PackageManager
