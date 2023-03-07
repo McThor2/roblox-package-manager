@@ -71,7 +71,7 @@ local function init()
 	Logging:SetRootInstance(script.Parent)
 
 	if not Config:Get("Logging Level") then
-		Config:Set("Logging Level", Logging.DEBUG)
+		Config:Set("Logging Level", Logging.INFO)
 	end
 
 	Config.Changed:Connect(function()
