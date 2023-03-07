@@ -331,6 +331,29 @@ local function mountDownloadsMenu(parentFrame: Frame)
 		end
 	)
 	downloadFrame.Parent = parentFrame
+
+	local installFrame = Instance.new("Frame")
+	installFrame.Size = UDim2.new(1, -10, 0, 20)
+	installFrame.Position = UDim2.fromOffset(5, 35)
+	installFrame.BackgroundTransparency = 1
+	installFrame.Parent = parentFrame
+
+	local installButton = StudioWidgets.CustomTextButton.new(
+		"Browse files",
+		"Browse files",
+		15
+	)
+	do
+		local buttonInstance = installButton:GetButton()
+		buttonInstance.Size = UDim2.new(0, 150, 1, 0)
+		buttonInstance.AnchorPoint = Vector2.new(0.5,0.5)
+		buttonInstance.Position = UDim2.fromScale(0.5,0.5)
+
+		GUI.BrowseActivated = buttonInstance.Activated
+
+		buttonInstance.Parent = installFrame
+	end
+
 end
 
 local function mountSearchMenu(parentFrame: Frame)
