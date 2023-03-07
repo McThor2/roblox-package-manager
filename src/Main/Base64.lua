@@ -1,102 +1,120 @@
+local lookupValueToASCII = {} :: { [number]: number }
+local lookupASCIIToValue = {} :: { [number]: number }
 
-local Base64 = {}
+local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
-local CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+for index = 1, #alphabet do
+	local value = index - 1
+	local ascii = string.byte(alphabet, index)
 
-local CHAR_TABLE = string.split(CHARS, "")
-
-local function pushOctet(stack: number, byte: number)
-    stack = bit32.lshift(stack, 8)
-    stack = bit32.bor(stack, byte)
-    return stack
+	lookupValueToASCII[value] = ascii
+	lookupASCIIToValue[ascii] = value
 end
 
-local function splitStack(stack: number, size: number)
+lookupASCIIToValue[string.byte("=")] = 0
 
-    local mask = 0b111111
+local function buildStringFromCodes(values: { number }): string
+	local chunks = {} :: { string }
 
-    local elements = {}
-    for offset = 0, size - 6, 6 do
-        local element = bit32.band(mask, bit32.rshift(stack, offset))
-        table.insert(elements, 1, element)
-    end
+	for index = 1, #values, 4096 do
+		table.insert(chunks, string.char(
+			unpack(values, index, math.min(index + 4096 - 1, #values))
+		))
+	end
 
-    return elements
-end
-local function bit32Encode(data: string)
-    local charCodes = {data:byte(1, #data)}
-    local encodedData = {}
-
-    for i = 1, #charCodes, 3 do
-        local stack, b, c = charCodes[i], charCodes[i+1], charCodes[i+2]
-        stack = pushOctet(stack, b)
-        stack = pushOctet(stack, c)
-
-        for _, element in splitStack(stack, 24) do
-            table.insert(encodedData, element)
-        end
-
-    end
-
-    local encodedString = ""
-    for _, code in encodedData do
-        encodedString ..= CHAR_TABLE[code+1]
-    end
-
-    return encodedString
+	return table.concat(chunks, "")
 end
 
--- this function converts a string to base64
-function Base64:Encode(data: string)
-    local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    return ((data:gsub('.', function(x)
-        local r, b = '', x:byte()
-        for i=8,1,-1 do 
-            r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0')
-        end
-        return r;
-    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
-        if #x < 6 then
-            return ''
-        end
-        local c=0
-        for i=1,6 do 
-            c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0)
-        end
-        return b:sub(c+1,c+1)
-    end)..({ '', '==', '=' })[#data%3+1])
+local function encode(input: string): string
+	local inputLength = #input
+	local outputLength = math.ceil(inputLength / 3) * 4
+
+	local remainder = inputLength % 3
+
+	if remainder == 0 then
+		-- Since chunks are only 3 characters wide and we're parsing 4 characters, we need
+		-- to add an extra 0 on the end (which will be discarded anyway)
+		input ..= string.char(0)
+	end
+
+	local output = table.create(outputLength, 0) :: { number }
+
+	for chunkIndex = 0, (outputLength / 4) - (1 + 1) do
+		local inputIndex = chunkIndex * 3 + 1
+		local outputIndex = chunkIndex * 4 + 1
+
+		-- Parse this as a single 32-bit integer instead of splitting into multiple and combining after
+		local chunk = bit32.rshift(string.unpack(">J", input, inputIndex), 8)
+
+		output[outputIndex] = lookupValueToASCII[bit32.rshift(chunk, 18)]
+		output[outputIndex + 1] = lookupValueToASCII[bit32.band(bit32.rshift(chunk, 12), 0b111111)]
+		output[outputIndex + 2] = lookupValueToASCII[bit32.band(bit32.rshift(chunk, 6), 0b111111)]
+		output[outputIndex + 3] = lookupValueToASCII[bit32.band(chunk, 0b111111)]
+	end
+
+	if remainder == 1 then -- AA==
+		local chunk = string.byte(input, inputLength)
+
+		output[outputLength - 3] = lookupValueToASCII[bit32.rshift(chunk, 2)]
+		output[outputLength - 2] = lookupValueToASCII[bit32.band(bit32.lshift(chunk, 4), 0b111111)]
+		output[outputLength - 1] = 61
+		output[outputLength] = 61
+	elseif remainder == 2 then -- AAA=
+		local chunk = string.unpack(">H", input, inputLength - 1)
+
+		output[outputLength - 3] = lookupValueToASCII[bit32.rshift(chunk, 10)]
+		output[outputLength - 2] = lookupValueToASCII[bit32.band(bit32.rshift(chunk, 4), 0b111111)]
+		output[outputLength - 1] = lookupValueToASCII[bit32.band(bit32.lshift(chunk, 2), 0b111111)]
+		output[outputLength] = 61
+	end
+
+	return buildStringFromCodes(output)
 end
 
--- this function converts base64 to string
-function Base64:Decode(data: string)
-    local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    data = string.gsub(data, '[^'..b..'=]', '')
-    return (data:gsub('.', function(x)
-        if x == '=' then
-            return ''
-        end
-        local r,f='',(b:find(x)-1)
-        for i=6,1,-1 do 
-            r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0')
-        end
-        return r;
-    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
-        if #x ~= 8 then return '' end
-        local c=0
-        for i=1,8 do
-            c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0)
-        end
-        return string.char(c)
-    end))
+local function decode(input: string): string
+	local inputLength = #input
+	local outputLength = math.ceil(inputLength / 4) * 3
+
+	local padding = 0
+	if string.byte(input, inputLength - 1) == 61 then
+		padding = 2
+	elseif string.byte(input, inputLength) == 61 then
+		padding = 1
+	end
+
+	local output = table.create(outputLength - padding, 0)
+
+	for chunkIndex = 0, (outputLength / 3) - 1 do
+		local inputIndex = chunkIndex * 4 + 1
+		local outputIndex = chunkIndex * 3 + 1
+
+		local value1, value2, value3, value4 = string.byte(input, inputIndex, inputIndex + 3)
+
+		-- Combine all variables into one 24-bit variable to be split up
+		local compound = bit32.bor(
+			bit32.lshift(lookupASCIIToValue[value1], 18),
+			bit32.lshift(lookupASCIIToValue[value2], 12),
+			bit32.lshift(lookupASCIIToValue[value3], 6),
+			lookupASCIIToValue[value4]
+		)
+
+		output[outputIndex] = bit32.rshift(compound, 16)
+		output[outputIndex + 1] = bit32.band(bit32.rshift(compound, 8), 0b11111111)
+		output[outputIndex + 2] = bit32.band(compound, 0b11111111)
+	end
+
+	if padding >= 1 then
+		output[outputLength] = nil
+
+		if padding >= 2 then
+			output[outputLength - 1] = nil
+		end
+	end
+
+	return buildStringFromCodes(output)
 end
 
-local test = "Manmanmanmanmanmna"
-
-local t0 = os.clock()
-for _ = 1, 1_000_000 do
-    bit32Encode(test)
-end
-print(`{os.clock() - t0}`)
-print(bit32Encode(test))
-
-return Base64
+return {
+	encode = encode,
+	decode = decode,
+}
