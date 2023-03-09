@@ -1,3 +1,5 @@
+--# selene: allow(parenthese_conditions, shadowing, multiple_statements)
+
 local TOML = {
 	-- denotes the current supported TOML version
 	version = 0.40,
@@ -60,20 +62,6 @@ TOML.parse = function(toml, options)
 	-- remove the (Lua) whitespace at the beginning and end of a string
 	local function trim(str)
 		return str:gsub("^%s*(.-)%s*$", "%1")
-	end
-
-	-- divide a string into a table around a delimiter
-	local function split(str, delim)
-		if str == "" then return {} end
-		local result = {}
-		local append = delim
-		if delim:match("%%") then
-			append = delim:gsub("%%", "")
-		end
-		for match in (str .. append):gmatch("(.-)" .. delim) do
-			table.insert(result, match)
-		end
-		return result
 	end
 
 	-- produce a parsing error message
@@ -422,10 +410,6 @@ TOML.parse = function(toml, options)
 			end
 		end
 
-		if char():match(nl) then
-			-- skip
-		end
-
 		if char() == "=" then
 			step()
 			skipWhitespace()
@@ -602,7 +586,7 @@ TOML.encode = function(tbl)
 					if arrayTable then
 						-- double bracket syntax go!
 						table.insert(cache, k)
-						for kk, vv in pairs(v) do
+						for _, vv in pairs(v) do
 							toml = toml .. "[[" .. table.concat(cache, ".") .. "]]\n"
 							for k3, v3 in pairs(vv) do
 								if type(v3) ~= "table" then
@@ -617,7 +601,7 @@ TOML.encode = function(tbl)
 					else
 						-- plain ol boring array
 						toml = toml .. k .. " = [\n"
-						for kk, vv in pairs(first) do
+						for _, vv in pairs(first) do
 							toml = toml .. tostring(vv) .. ",\n"
 						end
 						toml = toml .. "]\n"
