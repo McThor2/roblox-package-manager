@@ -257,6 +257,8 @@ function PackageManager:InstallArchive(file: File)
 	local scope, name = table.unpack(string.split(metaData["package"]["name"], "/"))
 	local _version = metaData["package"]["version"]
 
+	Logging:Info(`Installing {scope}/{name}@{_version}`)
+
 	local packageMetaData = {}
 
 	packageMetaData.dependencies = metaData["dependencies"]

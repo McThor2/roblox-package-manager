@@ -92,6 +92,8 @@ local function init()
 			return
 		end
 
+		Logging:Info(`Using file {file}`)
+
 		local installedPackage = PackageManager:InstallArchive(file)
 		Selection:Add({installedPackage})
 	end)
