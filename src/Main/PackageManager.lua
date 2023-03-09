@@ -186,6 +186,7 @@ function PackageManager:GetPackageFromPath(
 		return
 	end
 
+	-- TODO: Just using capitalised name, need to update to use metadata + package deps
 	package.Name = string.sub(name, 1, 1):upper() .. string.sub(name, 2, #name)
 
 	package:SetAttribute("Scope", scope)
