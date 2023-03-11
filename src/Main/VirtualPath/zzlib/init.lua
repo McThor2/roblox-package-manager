@@ -184,17 +184,19 @@ local function findEocd(buf)
 	local commentLength = int2le(buf, eocdOffset + commentLengthOffset)
 
 	-- Correct eocdOffset and commentLength satisfy:
-	-- #buf == eocdOffset + commentLength + 1
-	while
-		int4le(buf, eocdOffset) ~= EOCD_SIGNATURE and
-		eocdOffset + commentLength + 1 ~= #buf and
-		commentLength <= 0xffff do
+	-- #buf == eocdOffset + commentLength + 21
+	while int4le(buf, eocdOffset) ~= EOCD_SIGNATURE or
+		eocdOffset + commentLength + 21 ~= #buf do
 
 		eocdOffset -= 1
 		commentLength = int2le(buf, eocdOffset + commentLengthOffset)
+
+		if #buf - eocdOffset > 0xffff or eocdOffset < 1 then
+			break
+		end
 	end
 
-	if int4le(buf, eocdOffset) ~= EOCD_SIGNATURE then
+	if eocdOffset < 1 or int4le(buf, eocdOffset) ~= EOCD_SIGNATURE then
 		error("Unable to locate EOCD record")
 	end
 
