@@ -242,7 +242,12 @@ end
 function PackageManager:InstallArchive(file: File)
 
 	local content = file:GetBinaryContents()
-	local path = VirtualPath.fromZip(content)
+	local success, path = pcall(VirtualPath.fromZip, VirtualPath, content)
+	if not success then
+		Logging:Warning(`Failed to unzip archive {file}`)
+		Logging:Debug(path)
+		return
+	end
 
 	local wallyFile = path / "wally.toml"
 	local rawMetaData = wallyFile:IsFile() and wallyFile:Read()
