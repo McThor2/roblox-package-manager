@@ -41,7 +41,7 @@ do
         local funcName = debug.info(debugLevel, "n")
         local debugInfo = `{source}, Line {line}`
 
-        if funcName then
+        if funcName and funcName ~= "" then
             debugInfo ..= ` - function {funcName}`
         end
 
