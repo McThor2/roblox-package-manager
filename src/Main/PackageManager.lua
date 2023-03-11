@@ -248,6 +248,7 @@ function PackageManager:InstallArchive(file: File)
 	local rawMetaData = wallyFile:IsFile() and wallyFile:Read()
 
 	if not rawMetaData then
+		Logging:Warning(`Could not find package meta data in file {file}`)
 		return
 	end
 
