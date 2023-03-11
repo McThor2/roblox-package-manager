@@ -1,75 +1,66 @@
 
---!nonstrict
 -- McThor2
 
-local root = script.Parent
-
-local GitHubApi = require(script:WaitForChild("GitHubApi"))
 local WallyApi = require(script:WaitForChild("WallyApi"))
 local GUI = require(script:WaitForChild("GUI"))
 local Config = require(script:WaitForChild("Config"))
-local Version = require(script:WaitForChild("Version"))
+local PackageManager = require(script:WaitForChild("PackageManager"))
+local Logging = require(script:WaitForChild("Logging"))
 
+local StudioService = game:GetService("StudioService")
 local Selection = game:GetService("Selection")
-local ServerStorage = game:GetService("ServerStorage")
 
 local RPM_SETTINGS_KEY = "rpm_settings"
 
 local WALLY_PACKAGE_PATTERN = "^([%w-]+)/([%w-]+)@(%w+.%w+.%w+)$"
-local GH_PATTERN = "^(%a+)/(%a+)$"
 
-local function onDownload(url: string)
+local function onDownload(inputText: string)
 
-	local scope, name, ver = string.match(url, WALLY_PACKAGE_PATTERN)
+	Logging:Debug(`Download button with '{inputText}'`)
 
-	if not scope then
+	local scope, name, ver = string.match(inputText, WALLY_PACKAGE_PATTERN)
+
+	if not (scope and name and ver) then
 		return
 	end
 
-	local parent = Config:GetPackageLocation()
-	
 	-- TODO: Search for existing package
 
-	local package, sharedPackages, serverPackages = WallyApi:InstallPackage(scope, name, ver)
-	
-	local metaData = WallyApi:GetMetaData(scope, name)
-	
+	local package = WallyApi:GetPackage(scope, name, ver)
+
 	if not package then
-		warn("Could not download package")
+		Logging:Warning(`Could not download package: {scope}/{name}@{ver}`)
 		return
 	end
 
-	local installedModules = {package}
-	package.Parent = parent
-
-	for _, depPackage in sharedPackages do
-		depPackage.Parent = parent
-		table.insert(installedModules, depPackage)
-	end
-
-	for _, depPackage in serverPackages do
-		depPackage.Parent = parent
-		table.insert(installedModules, depPackage)
-	end
-
-	Selection:Add(installedModules)
+	local installedPackages = PackageManager:InstallPackages(
+		{package},
+		function(...)
+			return WallyApi:GetPackageVersions(...)
+		end,
+		function(...)
+			return WallyApi:GetPackage(...)
+		end
+	)
+	Logging:Info("Installed", installedPackages)
+	Selection:Add(installedPackages)
 end
 
 local function onResultRow(row: GUI.ResultRow)
-	
-	print(row)
-	
+
+	Logging:Debug(row)
+
 	local scope = row.Description.scope
 	local name = row.Description.name
-	
+
 	if row.MetaData == nil then
-		print("set meta")
+		Logging:Debug("set meta")
 		local metaData = WallyApi:GetMetaData(scope, name)
 		row:SetMetaData(metaData)
 	end
 end
 
-local function onWally(rawText: string)
+local function onWallySearch(rawText: string)
 	local packagesInfo = WallyApi:ListPackages(rawText)
 	GUI:UpdateSearchResults(packagesInfo, onResultRow)
 
@@ -77,13 +68,39 @@ end
 
 local function init()
 
+	Logging:SetRootInstance(script.Parent)
+
+	if not Config:Get("Logging Level") then
+		Config:Set("Logging Level", Logging.INFO)
+	end
+
+	Config.Changed:Connect(function()
+		Logging:SetLevel(Config:Get("Logging Level"))
+	end)
+	Logging:SetLevel(Config:Get("Logging Level"))
+
 	GUI:Init(plugin)
 	GUI:RegisterDownloadCallback(onDownload)
-	GUI:RegisterWallySearch(onWally)
+	GUI:RegisterWallySearch(onWallySearch)
 
-	local placeSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
+	GUI.BrowseActivated:Connect(function()
+		local file = StudioService:PromptImportFile({"zip", "gz"})
 
-	if placeSettings == nil then
+		Logging:Debug(file)
+
+		if not file then
+			return
+		end
+
+		Logging:Info(`Using file {file}`)
+
+		local installedPackage = PackageManager:InstallArchive(file)
+		Selection:Add({installedPackage})
+	end)
+
+	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
+
+	if pluginSettings == nil then
 		plugin:SetSetting(RPM_SETTINGS_KEY, {})
 	end
 

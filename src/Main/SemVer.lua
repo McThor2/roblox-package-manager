@@ -1,4 +1,7 @@
 
+-- McThor2
+-- See https://semver.org/#semantic-versioning-200
+
 local SemVer = {}
 do
 	SemVer.__index = SemVer

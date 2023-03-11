@@ -331,6 +331,29 @@ local function mountDownloadsMenu(parentFrame: Frame)
 		end
 	)
 	downloadFrame.Parent = parentFrame
+
+	local installFrame = Instance.new("Frame")
+	installFrame.Size = UDim2.new(1, -10, 0, 20)
+	installFrame.Position = UDim2.fromOffset(5, 35)
+	installFrame.BackgroundTransparency = 1
+	installFrame.Parent = parentFrame
+
+	local installButton = StudioWidgets.CustomTextButton.new(
+		"Browse files",
+		"Browse files",
+		15
+	)
+	do
+		local buttonInstance = installButton:GetButton()
+		buttonInstance.Size = UDim2.new(0, 150, 1, 0)
+		buttonInstance.AnchorPoint = Vector2.new(0.5,0.5)
+		buttonInstance.Position = UDim2.fromScale(0.5,0.5)
+
+		GUI.BrowseActivated = buttonInstance.Activated
+
+		buttonInstance.Parent = installFrame
+	end
+
 end
 
 local function mountSearchMenu(parentFrame: Frame)
@@ -365,7 +388,7 @@ local function mountSettingsMenu(parentFrame: Frame)
 	versionLabel.Parent = parentFrame
 	GuiUtilities.syncGuiElementFontColor(versionLabel)
 
-	local textFormat = "Packages Location: %s"
+	local textFormat = "Packages Location: \"%s\""
 	local textLabel = Instance.new("TextLabel")
 	textLabel.Size = UDim2.fromOffset(100, 20)
 	textLabel.Text = ""
@@ -375,18 +398,35 @@ local function mountSettingsMenu(parentFrame: Frame)
 
 	textLabel.Parent = parentFrame
 
+	local serverTextFormat = "Server Packages Location: \"%s\""
+	local serverTextLabel = Instance.new("TextLabel")
+	serverTextLabel.Size = UDim2.fromOffset(100, 20)
+	serverTextLabel.Text = ""
+	serverTextLabel.BackgroundTransparency = 1
+	serverTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+	serverTextLabel.LayoutOrder = 3
+
+	serverTextLabel.Parent = parentFrame
+
 	local function update()
 		local packageLocation = Config:GetPackageLocation()
 		textLabel.Text = string.format(
 			textFormat,
-			packageLocation and packageLocation:GetFullName()
+			packageLocation and Config:GetRawLocation(packageLocation)
 			or " --- ")
+
+		local serverLocation = Config:GetServerPackageLocation()
+		serverTextLabel.Text = string.format(
+			serverTextFormat,
+			serverLocation and Config:GetRawLocation(serverLocation)
+			or "---")
 	end
 
 	Config.Changed:Connect(update)
 	update()
 
 	GuiUtilities.syncGuiElementFontColor(textLabel)
+	GuiUtilities.syncGuiElementFontColor(serverTextLabel)
 
 end
 
