@@ -1,6 +1,15 @@
 
 -- zzlib - zlib decompression in Lua - Implementation-independent code
 
+-- Local file header signature (0x04034b50)
+local LOCAL_FILE_SIGNATURE = 0x04034b50
+
+-- Central Directory signature (0x02014b50)
+local CD_SIGNATURE = 0x02014b50
+
+-- End Of Central Directory Signature (0x06054b50)
+local EOCD_SIGNATURE = 0x06054b50
+
 local unpack = table.unpack or unpack
 local infl = require(script:WaitForChild("inflate-bit32"))
 
@@ -134,18 +143,20 @@ function zzlib.inflate(str)
 	return inflate_zlib(infl.bitstream_init(str))
 end
 
+-- Extracts 2 bytes from the str starting at pos and interprets them as an int (little endian)
 local function int2le(str,pos)
 	local a,b = str:byte(pos,pos+1)
 	return b*256+a
 end
 
+-- Extracts 4 bytes from the str starting at pos and interprets them as an int (little endian)
 local function int4le(str,pos)
 	local a,b,c,d = str:byte(pos,pos+3)
 	return ((d*256+c)*256+b)*256+a
 end
 
 local function nextfile(buf,p)
-	if int4le(buf,p) ~= 0x02014b50 then
+	if int4le(buf,p) ~= CD_SIGNATURE then
 		-- end of central directory list
 		return
 	end
@@ -156,7 +167,7 @@ local function nextfile(buf,p)
 	local name = buf:sub(p+46,p+45+namelen)
 	local offset = int4le(buf,p+42)+1
 	p = p+46+namelen+int2le(buf,p+30)+int2le(buf,p+32)
-	if int4le(buf,offset) ~= 0x04034b50 then
+	if int4le(buf,offset) ~= LOCAL_FILE_SIGNATURE then
 		error("invalid local header signature")
 	end
 	local size = int4le(buf,offset+18)
@@ -165,15 +176,35 @@ local function nextfile(buf,p)
 	return p,name,offset,size,packed,crc
 end
 
-function zzlib.files(buf)
-	local p = #buf-21
-	if int4le(buf,p) ~= 0x06054b50 then
-		-- not sure there is a reliable way to locate the end of central directory record
-		-- if it has a variable sized comment field
-		error(".ZIP file comments not supported")
+-- Finds the end of central directory record by its signature
+local function findEocd(buf)
+
+	local eocdOffset = #buf - 21
+	local commentLengthOffset = 20
+	local commentLength = int2le(buf, eocdOffset + commentLengthOffset)
+
+	-- Correct eocdOffset and commentLength satisfy:
+	-- #buf == eocdOffset + commentLength + 1
+	while
+		int4le(buf, eocdOffset) ~= EOCD_SIGNATURE and
+		eocdOffset + commentLength + 1 ~= #buf and
+		commentLength <= 0xffff do
+
+		eocdOffset -= 1
+		commentLength = int2le(buf, eocdOffset + commentLengthOffset)
 	end
-	local cdoffset = int4le(buf,p+16)+1
-	return nextfile, buf,cdoffset
+
+	if int4le(buf, eocdOffset) ~= EOCD_SIGNATURE then
+		error("Unable to locate EOCD record")
+	end
+
+	return eocdOffset
+end
+
+function zzlib.files(buf)
+	local p = findEocd(buf)
+	local cdoffset = int4le(buf, p+16) + 1
+	return nextfile, buf, cdoffset
 end
 
 function zzlib.unzip(buf,arg1,arg2)
