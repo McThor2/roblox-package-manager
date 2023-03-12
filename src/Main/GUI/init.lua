@@ -3,6 +3,8 @@ local StudioWidgets = require(script:WaitForChild("StudioWidgets"))
 local WallyApi = require(script.Parent:WaitForChild("WallyApi"))
 local Version = require(script.Parent:WaitForChild("Version"))
 local Config = require(script.Parent:WaitForChild("Config"))
+local Logging = require(script.Parent.Logging)
+local Roact = require(script.Roact)
 
 local GuiUtilities = StudioWidgets.GuiUtilities
 
@@ -25,17 +27,20 @@ local WIDGET_MIN_HEIGHT = 200
 
 local DEFAULT_MENU = "Download"
 
+local SETTINGS_ICON = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png"
+
 local function blankFrame()
-	local rootFrame = Instance.new("Frame")
-	rootFrame.BackgroundTransparency = 1
-	rootFrame.BorderSizePixel = 0
-	rootFrame.Size = UDim2.fromScale(1,1)
-	rootFrame.Position = UDim2.fromScale(0,0)
-	return rootFrame
+	return Roact.createElement("Frame", {
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(0, 0)
+	})
 end
 
 local openEvent = Instance.new("BindableEvent")
 GUI.Opened = openEvent.Event
+
 local function createToolbar(plugin)
 	local toolbar = plugin:CreateToolbar(WIDGET_TITLE)
 
@@ -63,111 +68,73 @@ local function createToolbar(plugin)
 	end
 
 	button.Click:Connect(openGui)
-	
+
 	return toolbar, widget
 end
 
-local function createSearchEntry(
-	textBoxLabel: string, 
-	buttonText: string,
-	callback: (text: string) -> nil)
-	
-	local rootFrame = blankFrame()
-	
-	local textEntry = StudioWidgets.ScrollingTextInput.new(textBoxLabel)
-	local frame = textEntry:GetFrame()
-	frame.Parent = rootFrame
-	frame.Position = UDim2.fromOffset(10,10)
-	frame.Size = UDim2.new(1, -140, 0, 20)
-	
-	local box = textEntry:GetTextBox()
-	box.TextXAlignment = Enum.TextXAlignment.Left
+local function scrollingTextInput(props: {
+		placeHolderText: string?,
+		defaultText: string?
+	})
 
-	textEntry:GetTextBox().ClearTextOnFocus = false
-
-	local textButton = StudioWidgets.CustomTextButton.new(
-		"Search Button", 
-		buttonText, 
-		15
-	)
-	local button = textButton:GetButton()
-	button.Parent = rootFrame
-	button.AnchorPoint = Vector2.new(1,0)
-	button.Position = UDim2.new(1, -15, 0, 10)
-	button.Size = UDim2.fromOffset(100, 20)
-
-	button.Activated:Connect(function()
-		if callback then
-			callback(textEntry:GetValue())
-		end
-	end)
-	
-	return rootFrame
+	return Roact.createElement("ScrollingFrame", {
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.fromScale(0, 0),
+		ScrollBarThickness = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.X
+	}, {
+		TextBox = Roact.createElement("TextBox", {
+			TextXAlignment = Enum.TextXAlignment.Left,
+			ClearTextOnFocus = false,
+			AutomaticSize = true,
+			Size = UDim2.fromScale(1, 1),
+			PlaceholderText = props.placeHolderText or "",
+			Text = props.defaultText or ""
+		})
+	})
 end
 
-local function onMenuButton(rootFrame, menuFrames, menuName)
-	return function()
-		local activeFrame = menuFrames[menuName]
-		activeFrame.Parent = rootFrame
+local function searchEntry(props: {
+		textBoxLabel: string,
+		buttonText: string,
+		callback: (text: string) -> nil
+	})
 
-		for name, frame in pairs(menuFrames) do
-			if name == menuName then continue end
+	local textRef = Roact.createRef()
 
-			frame.Parent = nil
+	local textEntry = Roact.createElement(scrollingTextInput, {
+		Position = UDim2.fromOffset(10,10),
+		Size = UDim2.new(1, -140, 0, 20),
+		placeHolderText = props.textBoxLabel,
+		[Roact.Ref] = textRef
+	})
+
+	local button = Roact.createElement("TextButton", {
+		AnchorPoint = Vector2.new(1,0),
+		Position = UDim2.new(1, -15, 0, 10),
+		Size = UDim2.fromOffset(100, 20),
+		TextSize = 15,
+		Text = props.buttonText,
+		[Roact.Event.Activated] = function()
+			if props.callback then
+				props.callback(textRef:getValue().Text)
+			end
 		end
-	end
+	})
+
+	return Roact.createElement(blankFrame, {
+	}, {
+		TextEntry = textEntry,
+		Button = button
+	})
 end
 
-local function createMenuBar(buttonTexts: {string}, menuParentFrame: Frame)
-	
-	local rootFrame = blankFrame()
-	rootFrame.AnchorPoint = Vector2.new(0.5,0.5)
-	rootFrame.Position = UDim2.fromScale(0.5,0.5)
-	rootFrame.Size = UDim2.new(1, -10, 1)
-
-	local iconImage = Instance.new("ImageLabel")
-	iconImage.Image = ICON_ID
-	iconImage.Size = UDim2.new(0, 50, 1, -5)
-	iconImage.BackgroundTransparency = 1
-	iconImage.Parent = rootFrame
-
-	local iconAspectRatio = Instance.new("UIAspectRatioConstraint")
-	iconAspectRatio.AspectRatio = 1
-	iconAspectRatio.AspectType = Enum.AspectType.ScaleWithParentSize
-	iconAspectRatio.DominantAxis = Enum.DominantAxis.Height
-	iconAspectRatio.Parent = iconImage
-	
-	local uiLayout = Instance.new("UIListLayout")
-	uiLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-	uiLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	uiLayout.Padding = UDim.new(0, 10)
-	uiLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	uiLayout.FillDirection = Enum.FillDirection.Horizontal
-	uiLayout.Parent = rootFrame
-
-	local menuFrames = {}
-	for order, buttonName in ipairs(buttonTexts) do
-		local manualButton = StudioWidgets.CustomTextButton.new(
-			"MenuButton" .. tostring(order + 1),
-			buttonName,
-			18
-		)
-		local button = manualButton:GetButton()
-		button.Parent = rootFrame
-		button.Size = UDim2.new(0, 100, 1, -10)
-		button.LayoutOrder = order
-		button.Activated:Connect(
-			onMenuButton(
-				menuParentFrame,
-				menuFrames,
-				buttonName
-			)
-		)
-
-		menuFrames[buttonName] = blankFrame()
-	end
-	
-	return rootFrame, menuFrames
+local function menuButton(props)
+	return Roact.createElement("ImageButton", {
+		Image = props.Image,
+		[Roact.Event.Activated] = props.OnActivated
+	})
 end
 
 local ResultRow = {}
@@ -320,64 +287,56 @@ do
 
 end
 
-local function mountDownloadsMenu(parentFrame: Frame)
-	local downloadFrame = createSearchEntry(
-		"<scope>/<name>@<version>",
-		"Download",
-		function(url)
-			if downloadCallback then
-				downloadCallback(url)
-			end
-		end
-	)
-	downloadFrame.Parent = parentFrame
+local function downloadsMenu(props: {
+		downloadCallback: ((url: string) -> nil)?,
+		browseCallback: (() -> nil)?
+	})
 
-	local installFrame = Instance.new("Frame")
-	installFrame.Size = UDim2.new(1, -10, 0, 20)
-	installFrame.Position = UDim2.fromOffset(5, 35)
-	installFrame.BackgroundTransparency = 1
-	installFrame.Parent = parentFrame
+	local downloadEntry = Roact.createElement(searchEntry, {
+		textBoxLabel = "<scope>/<name>@<version>",
+		buttonText = "Download",
+		callback = props.downloadCallback
+	})
 
-	local installButton = StudioWidgets.CustomTextButton.new(
-		"Browse files",
-		"Browse files",
-		15
-	)
-	do
-		local buttonInstance = installButton:GetButton()
-		buttonInstance.Size = UDim2.new(0, 150, 1, 0)
-		buttonInstance.AnchorPoint = Vector2.new(0.5,0.5)
-		buttonInstance.Position = UDim2.fromScale(0.5,0.5)
+	local browseButton = Roact.createElement("TextButton", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Size = UDim2.new(0, 150, 0, 20),
+		Position = UDim2.new(0.5, 0, 0, 35),
+		BackgroundTransparency = 1,
+		Text = "Browse files",
+		TextSize = 15,
+		[Roact.Event.Activated] = props.browseCallback
+	})
 
-		GUI.BrowseActivated = buttonInstance.Activated
-
-		buttonInstance.Parent = installFrame
-	end
-
+	return Roact.createFragment({
+		DownloadEntry = downloadEntry,
+		BrowseButton = browseButton
+	})
 end
 
-local function mountSearchMenu(parentFrame: Frame)
-	local wallySearch = createSearchEntry(
-		"search...",
-		"Go",
-		function(text)
-			if wallyCallback then
-				wallyCallback(text)
-			end
-		end
-	)
-	wallySearch.Parent = parentFrame
+local function searchMenu(props: {
+		searchCallback: (rawText: string) -> nil
+	})
+
+	local wallySearch = Roact.createElement(searchEntry, {
+		textBoxLabel = "search...",
+		buttonText = "Go",
+		callback = props.searchCallback
+	})
+	--wallySearch.Parent = parentFrame
 
 	local searchResults = SearchResults.new()
 	searchResults.Frame.Parent = wallySearch
-	
+
 	GUI.SearchResults = searchResults
+
+	return wallySearch
 end
 
-local function mountSettingsMenu(parentFrame: Frame)
+local function settingsMenu(props)
 
 	local listLayout = Instance.new("UIListLayout")
-	listLayout.Parent = parentFrame
+	--listLayout.Parent = parentFrame
 
 	local versionLabel = Instance.new("TextLabel")
 	versionLabel.Size = UDim2.fromOffset(100, 20)
@@ -385,7 +344,7 @@ local function mountSettingsMenu(parentFrame: Frame)
 	versionLabel.TextXAlignment = Enum.TextXAlignment.Left
 	versionLabel.Text = "Version: v" .. Version.Value
 	versionLabel.LayoutOrder = 1
-	versionLabel.Parent = parentFrame
+	--versionLabel.Parent = parentFrame
 	GuiUtilities.syncGuiElementFontColor(versionLabel)
 
 	local textFormat = "Packages Location: \"%s\""
@@ -396,7 +355,7 @@ local function mountSettingsMenu(parentFrame: Frame)
 	textLabel.TextXAlignment = Enum.TextXAlignment.Left
 	textLabel.LayoutOrder = 2
 
-	textLabel.Parent = parentFrame
+	--textLabel.Parent = parentFrame
 
 	local serverTextFormat = "Server Packages Location: \"%s\""
 	local serverTextLabel = Instance.new("TextLabel")
@@ -406,7 +365,7 @@ local function mountSettingsMenu(parentFrame: Frame)
 	serverTextLabel.TextXAlignment = Enum.TextXAlignment.Left
 	serverTextLabel.LayoutOrder = 3
 
-	serverTextLabel.Parent = parentFrame
+	--serverTextLabel.Parent = parentFrame
 
 	local function update()
 		local packageLocation = Config:GetPackageLocation()
@@ -430,9 +389,86 @@ local function mountSettingsMenu(parentFrame: Frame)
 
 end
 
-function GUI:RegisterWallySearch(callback)
-	wallyCallback = callback
+local MenuComponent = Roact.Component:extend("Menu")
+do
+
+	function MenuComponent:init(props)
+		self:setState({
+			CurrentMenu = props.Default,
+			MenuElement = props.Menus[props.Default].Element
+		})
+	end
+
+	function MenuComponent:render()
+
+		local uiLayout = Roact.createElement("UIListLayout", {
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+			Padding = UDim.new(0, 10),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			FillDirection = Enum.FillDirection.Horizontal
+		})
+
+		local iconImage = Roact.createElement("ImageLabel", {
+			Image = ICON_ID,
+			Size = UDim2.new(0, 50, 1, -5),
+			BackgroundTransparency = 1,
+			LayoutOrder = 1
+		}, {
+			AspectRatio = Roact.createElement("UIAspectRatioConstraint", {
+				AspectRatio = 1,
+				AspectType = Enum.AspectType.ScaleWithParentSize,
+				DominantAxis = Enum.DominantAxis.Height
+			})
+		})
+
+		local menuFrames = {}
+		for menuName, menuProps in self.props.Menus do
+
+			local newButton = Roact.createElement(menuButton, {
+				LayoutOrder = menuProps.LayoutOrder,
+				Image = menuProps.Image,
+				OnActivated = function()
+					self:setState({
+						CurrentMenu = menuName,
+						MenuElement = menuProps.Element
+					})
+				end
+			})
+
+			menuFrames[menuName] = newButton
+		end
+
+		local buttons = Roact.createFragment(menuFrames)
+
+		local topBar = Roact.createElement(blankFrame, {
+			Size = UDim2.new(1,0,0,40),
+			Position = UDim2.fromScale(0,0)
+		}, {
+			Layout = uiLayout,
+			Icon = iconImage,
+			Buttons = buttons
+		})
+
+		local bottomFrame = Roact.createElement(blankFrame, {
+			Size = UDim2.new(1, -10, 1, -45),
+			AnchorPoint = Vector2.new(0.5,1),
+			Position = UDim2.new(0.5, 0, 1, -5),
+			BackgroundTransparency = 0
+		}, {
+			ActiveMenu = self.state.MenuElement
+		})
+
+		Logging:Debug(self.state.CurrentMenu)
+
+		return Roact.createElement(blankFrame, {}, {
+			TopPanel = topBar,
+			BottomPanel = bottomFrame
+		})
+	end
+
 end
+
 
 function GUI:UpdateSearchResults(
 	resultsData: {PackageDescription},
@@ -467,43 +503,45 @@ function GUI:RegisterDownloadCallback(callback: (url: string) -> nil)
 	downloadCallback = callback
 end
 
-function GUI:Init(plugin)
+function GUI:Init(props: {
+		Plugin: any,
+		OnDownload: (url: string) -> nil,
+		OnBrowse: () -> nil,
+		OnWallySearch: (rawText: string) -> nil
+	})
 
 	--selene: allow(unused_variable)
-	local toolbar, widget = createToolbar(plugin)
+	local toolbar, widget = createToolbar(props.Plugin)
 
-	local topFrame = blankFrame()
-	topFrame.Size = UDim2.new(1,0,0,40)
-	topFrame.Position = UDim2.fromScale(0,0)
-	
-	topFrame.Parent = widget
-	
-	local bottomFrame = blankFrame()
-	bottomFrame.Size = UDim2.new(1, -10, 1, -45)
-	bottomFrame.AnchorPoint = Vector2.new(0.5,1)
-	bottomFrame.Position = UDim2.new(0.5, 0, 1, -5)
-	bottomFrame.BackgroundTransparency = 0
-	
-	StudioWidgets.GuiUtilities.syncGuiElementBackgroundColor(bottomFrame)
-	
-	bottomFrame.Parent = widget
-	
-	local menuFrame, menuFrames = createMenuBar(
-		{
-			"Download",
-			"Search Wally",
-			"Settings"
+	local menu = Roact.createElement(MenuComponent, {
+		Menus = {
+			Download = {
+				LayoutOrder = 2,
+				Element = Roact.createElement(downloadsMenu, {
+					downloadCallback = props.OnDownload,
+					browseCallback = props.OnBrowse
+				})
+			},
+			["Search Wally"] = {
+				LayoutOrder = 3,
+				Element = Roact.createElement(searchMenu, {
+					searchCallback = props.OnWallySearch
+				})
+			},
+			Settings = {
+				LayoutOrder = 4,
+				Element = Roact.createElement(settingsMenu)
+			}
 		},
-		bottomFrame
-	)
-	menuFrame.Parent = topFrame
+		Default = DEFAULT_MENU
+	})
 
-	mountDownloadsMenu(menuFrames["Download"])
-	mountSearchMenu(menuFrames["Search Wally"])
-	mountSettingsMenu(menuFrames["Settings"])
+	local app = Roact.createElement(blankFrame, nil, {
+		Menu = menu
+	})
 
-	local defaultFrame = menuFrames[DEFAULT_MENU]
-	defaultFrame.Parent = bottomFrame
+	Roact.mount(app, widget)
+
 end
 
 return GUI

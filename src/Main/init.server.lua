@@ -66,6 +66,22 @@ local function onWallySearch(rawText: string)
 
 end
 
+local function onBrowse()
+
+	local file = StudioService:PromptImportFile({"zip", "gz"})
+
+	Logging:Debug(file)
+
+	if not file then
+		return
+	end
+
+	Logging:Info(`Using file {file}`)
+
+	local installedPackage = PackageManager:InstallArchive(file)
+	Selection:Add({installedPackage})
+end
+
 local function init()
 
 	Logging:SetRootInstance(script.Parent)
@@ -79,24 +95,12 @@ local function init()
 	end)
 	Logging:SetLevel(Config:Get("Logging Level"))
 
-	GUI:Init(plugin)
-	GUI:RegisterDownloadCallback(onDownload)
-	GUI:RegisterWallySearch(onWallySearch)
-
-	GUI.BrowseActivated:Connect(function()
-		local file = StudioService:PromptImportFile({"zip", "gz"})
-
-		Logging:Debug(file)
-
-		if not file then
-			return
-		end
-
-		Logging:Info(`Using file {file}`)
-
-		local installedPackage = PackageManager:InstallArchive(file)
-		Selection:Add({installedPackage})
-	end)
+	GUI:Init({
+		Plugin = plugin,
+		OnDownload = onDownload,
+		OnBrowse = onBrowse,
+		OnWallySearch = onWallySearch
+	})
 
 	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
 
