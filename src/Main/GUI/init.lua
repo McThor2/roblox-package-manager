@@ -1,17 +1,12 @@
 
-local StudioWidgets = require(script:WaitForChild("StudioWidgets"))
 local WallyApi = require(script.Parent:WaitForChild("WallyApi"))
 local Version = require(script.Parent:WaitForChild("Version"))
 local Config = require(script.Parent:WaitForChild("Config"))
 local Logging = require(script.Parent.Logging)
 local Roact = require(script.Roact)
 
-local GuiUtilities = StudioWidgets.GuiUtilities
-
 type PackageDescription = WallyApi.PackageDescription
 type PackageMetaData = WallyApi.PackageMetaData
-
-local downloadCallback, wallyCallback
 
 local GUI = {}
 
@@ -29,13 +24,20 @@ local DEFAULT_MENU = "Download"
 
 local SETTINGS_ICON = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png"
 
-local function blankFrame()
-	return Roact.createElement("Frame", {
+local function blankFrame(props)
+
+	local defaultProps = {
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Size = UDim2.fromScale(1, 1),
-		Position = UDim2.fromScale(0, 0)
-	})
+		Size = UDim2.fromScale(1, 1)
+	}
+
+	for k, v in defaultProps do
+		if props[k] then continue end
+		props[k] = v
+	end
+
+	return Roact.createElement("Frame", props)
 end
 
 local openEvent = Instance.new("BindableEvent")
@@ -73,8 +75,11 @@ local function createToolbar(plugin)
 end
 
 local function scrollingTextInput(props: {
+		Position: UDim2,
+		Size: UDim2,
 		placeHolderText: string?,
-		defaultText: string?
+		defaultText: string?,
+		[Roact.Ref]: Roact.Ref
 	})
 
 	return Roact.createElement("ScrollingFrame", {
@@ -82,15 +87,18 @@ local function scrollingTextInput(props: {
 		BorderSizePixel = 0,
 		CanvasSize = UDim2.fromScale(0, 0),
 		ScrollBarThickness = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.X
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		Size = props.Size,
+		Position = props.Position
 	}, {
 		TextBox = Roact.createElement("TextBox", {
 			TextXAlignment = Enum.TextXAlignment.Left,
 			ClearTextOnFocus = false,
-			AutomaticSize = true,
+			AutomaticSize = Enum.AutomaticSize.X,
 			Size = UDim2.fromScale(1, 1),
 			PlaceholderText = props.placeHolderText or "",
-			Text = props.defaultText or ""
+			Text = props.defaultText or "",
+			[Roact.Ref] = props[Roact.Ref]
 		})
 	})
 end
@@ -104,7 +112,7 @@ local function searchEntry(props: {
 	local textRef = Roact.createRef()
 
 	local textEntry = Roact.createElement(scrollingTextInput, {
-		Position = UDim2.fromOffset(10,10),
+		Position = UDim2.fromOffset(10, 10),
 		Size = UDim2.new(1, -140, 0, 20),
 		placeHolderText = props.textBoxLabel,
 		[Roact.Ref] = textRef
@@ -114,7 +122,7 @@ local function searchEntry(props: {
 		AnchorPoint = Vector2.new(1,0),
 		Position = UDim2.new(1, -15, 0, 10),
 		Size = UDim2.fromOffset(100, 20),
-		TextSize = 15,
+		TextSize = 14,
 		Text = props.buttonText,
 		[Roact.Event.Activated] = function()
 			if props.callback then
@@ -124,6 +132,7 @@ local function searchEntry(props: {
 	})
 
 	return Roact.createElement(blankFrame, {
+		Size = UDim2.new(1, 0, 0, 20)
 	}, {
 		TextEntry = textEntry,
 		Button = button
@@ -131,160 +140,116 @@ local function searchEntry(props: {
 end
 
 local function menuButton(props)
-	return Roact.createElement("ImageButton", {
-		Image = props.Image,
+	return Roact.createElement("TextButton", {
+		Text = props.Text,
+		Size = UDim2.new(0, 100, 0, 30),
+		TextSize = 12,
+		LayoutOrder = props.LayoutOrder,
 		[Roact.Event.Activated] = props.OnActivated
 	})
 end
 
-local ResultRow = {}
-do
-	ResultRow.__index = ResultRow
-	
-	local HIDDEN = "hidden"
-	local SHOWN = "shown"
+type RowData = {
+	Description: PackageDescription,
+	IsOpen: boolean,
+	OnActivate: (scope: string, name: string) -> nil,
+	MetaData: PackageMetaData?,
+}
+
+local function resultRow(props: RowData)
+
 	local HEIGHT = 50
-	
-	function ResultRow.new(description: PackageDescription)
 
-		local rootFrame = Instance.new("Frame")
-		rootFrame.Size = UDim2.new(1, 0, 0, HEIGHT)
-		--rootFrame.ZIndex = -1
-		rootFrame.BackgroundTransparency = 1
-		rootFrame.BorderSizePixel = 0
+	local scope = props.Description.scope
+	local name = props.Description.name
 
-		local textButton = Instance.new("TextButton")
-		textButton.Parent = rootFrame
-		textButton.Size = UDim2.new(1, -25, 0, HEIGHT - 10)
-		textButton.TextSize = 10
-		textButton.ZIndex = 5
-		textButton.AnchorPoint = Vector2.new(0.5,0.5)
-		textButton.Position = UDim2.new(0.5, -8, 0, 0.5 * HEIGHT)
-		textButton.TextXAlignment = Enum.TextXAlignment.Left
-		textButton.Text = (
-			" Scope: " .. description.scope .. "\n" ..
-			" Name: " .. description.name --.. "\n" ..
-			--"Versions: " .. HttpService:JSONEncode(description.versions)
-		)
-		
-		StudioWidgets.GuiUtilities.syncGuiElementFontColor(textButton)
-		StudioWidgets.GuiUtilities.syncGuiElementBackgroundColor(textButton)
-		StudioWidgets.GuiUtilities.syncGuiElementBorderColor(textButton)
-		
-		local versionInfo = Instance.new("TextLabel")
-		versionInfo.Parent = rootFrame
-		versionInfo.Size = UDim2.new(1, -40, 1, -HEIGHT + 2)
-		versionInfo.TextSize = 10
-		versionInfo.Position = UDim2.new(0.5, 0, 1, 0)
-		versionInfo.AnchorPoint = Vector2.new(0.5, 1)
-		versionInfo.TextXAlignment = Enum.TextXAlignment.Left
-		versionInfo.TextYAlignment = Enum.TextYAlignment.Top
-		versionInfo.Text = " Loading ..."
-		
-		StudioWidgets.GuiUtilities.syncGuiElementFontColor(versionInfo)
-		StudioWidgets.GuiUtilities.syncGuiElementBackgroundColor(versionInfo)
-		StudioWidgets.GuiUtilities.syncGuiElementBorderColor(versionInfo)
+	local mainButton = Roact.createElement("TextButton", {
+		Size = UDim2.new(1, -25, 0, HEIGHT - 10),
+		TextSize = 10,
+		ZIndex = 5,
+		AnchorPoint = Vector2.new(0.5,0.5),
+		Position = UDim2.new(0.5, -8, 0, 0.5 * HEIGHT),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = (
+			` Scope: {props.Description.scope}\n` ..
+			` Name: {props.Description.name}`
+		),
+		[Roact.Event.Activated] = function()
+			props.OnActivated(scope, name)
+		end
+	})
 
-		local self = {}
-		setmetatable(self, ResultRow)
-		self._button = textButton
-		self._versionInfo = versionInfo
-		self._detailsHeight = 10
-		self.Frame = rootFrame
-		self.Activated = textButton.Activated
-		self.State = nil
-		self.Description = description
-		self.MetaData = nil
-		self:HideDetails()
-		
-		self.Activated:Connect(function()
-			self:_onActivated()
-		end)
-		
-		return self
-	end
-	
-	function ResultRow:ShowDetails()
-		self.State = SHOWN
-		
-		self.Frame.Size = UDim2.new(1, 0, 0, HEIGHT + self._detailsHeight)
-		self._versionInfo.Visible = true
-	end
-	
-	function ResultRow:HideDetails()
-		self.State = HIDDEN
-		
-		self._versionInfo.Visible = false
-		self.Frame.Size = UDim2.new(1, 0, 0, HEIGHT)
-	end
-	
-	function ResultRow:SetMetaData(newData: PackageMetaData)
-		self.MetaData = newData
-		
-		local newText = " Versions:\n"
-		
+	local size = UDim2.new(1, 0, 0, HEIGHT)
+	local text = " Loading ..."
+
+	if props.IsOpen and props.MetaData then
+
+		text = " Versions:\n"
+
 		local totalLines = 0
-		for i, versionMetaData in newData.versions do
+		for i, versionMetaData in props.MetaData.versions do
 			local _version = versionMetaData.package.version
-			
-			newText ..= "  - " .. tostring(_version) .. "\n"
-			totalLines = i
-		end
-		
-		self._detailsHeight = (totalLines + 1) * 15
-		
-		self._versionInfo.Text = newText
-		
-		if self.State == SHOWN then
-			self.Frame.Size = UDim2.new(1, 0, 0, HEIGHT + self._detailsHeight)
-		end
-	end
-	
-	function ResultRow:_onActivated()
-		if self.State == SHOWN then
-			return self:HideDetails()
-		elseif self.State == HIDDEN then
-			return self:ShowDetails()
-		else
-			error("unknown state: '" .. self.State .. "'")
-		end
-	end
-	
-end
-export type ResultRow = typeof(ResultRow.new())
 
-local SearchResults = {}
-do
-	SearchResults.__index = SearchResults
+			text ..= `  - {tostring(_version)}\n`
+			totalLines = i + 1
+		end
+
+		size = UDim2.new(1, 0, 0, HEIGHT + (totalLines) * 15)
+	end
+
+	local versionsInfo = Roact.createElement("TextLabel", {
+		Size = UDim2.new(1, -40, 1, -HEIGHT + 2),
+		TextSize = 10,
+		Position = UDim2.new(0.5, 0, 1, 0),
+		AnchorPoint = Vector2.new(0.5, 1),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		Text = text,
+		Visible = props.IsOpen
+	})
+
+	return Roact.createElement("Frame", {
+		Size = size,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0
+	}, {
+		MainButton = mainButton,
+		VersionsInfo = versionsInfo
+	})
+
+end
+
+local function searchResults(props: {
+		RowsData: {RowData}
+	})
 
 	local PADDING = 5
+	local SHADE = 40
 
-	function SearchResults.new()
-	
-		local rootFrame = Instance.new("ScrollingFrame")
-		rootFrame.Size = UDim2.new(1,0,1,-40)
-		rootFrame.AnchorPoint = Vector2.new(0.5, 1)
-		rootFrame.Position = UDim2.fromScale(0.5, 1)
-		rootFrame.BackgroundTransparency = 0.9
-		rootFrame.BorderSizePixel = 1
-		local shade = 40
-		rootFrame.BorderColor3 = Color3.fromRGB(shade, shade, shade)
-		rootFrame.CanvasSize = UDim2.fromOffset(0,0)
-		rootFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	local listLayout = Roact.createElement("UIListLayout", {
+		Padding = UDim.new(0, PADDING),
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+	})
 
-		local listLayout = Instance.new("UIListLayout")
-		listLayout.Parent = rootFrame
-		listLayout.Padding = UDim.new(0, PADDING)
-		listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-		local self = {}
-		setmetatable(self, SearchResults)
-		self.Frame = rootFrame
-		self.UILayout = listLayout
-
-		return self
+	local rowElements = {}
+	for i, data in props.RowsData do
+		local newElement = Roact.createElement(resultRow, data)
+		rowElements[`row {i}`] = newElement
 	end
 
+	return Roact.createElement("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -40),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 1),
+		BackgroundTransparency = 0.9,
+		BorderSizePixel = 1,
+		BorderColor3 = Color3.fromRGB(SHADE, SHADE, SHADE),
+		CanvasSize = UDim2.fromOffset(0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y
+	}, {
+		Layout = listLayout,
+		ResultRows = Roact.createFragment(rowElements)
+	})
 end
 
 local function downloadMenu(props: {
@@ -314,79 +279,109 @@ local function downloadMenu(props: {
 	})
 end
 
-local function searchMenu(props: {
-		searchCallback: (rawText: string) -> nil
-	})
+local SearchMenu = Roact.Component:extend("SearchMenu")
+do
 
-	local wallySearch = Roact.createElement(searchEntry, {
-		textBoxLabel = "search...",
-		buttonText = "Go",
-		callback = props.searchCallback
-	})
-	--wallySearch.Parent = parentFrame
+	function SearchMenu:init(props: {
+		searchCallback: (rawText: string) -> {PackageDescription},
+		rowCallback: (scope: string, name: string) -> PackageMetaData?,
+		results: {RowData}?
+		})
 
-	local searchResults = SearchResults.new()
-	searchResults.Frame.Parent = wallySearch
-
-	GUI.SearchResults = searchResults
-
-	return wallySearch
-end
-
-local function settingsMenu(props)
-
-	local listLayout = Instance.new("UIListLayout")
-	--listLayout.Parent = parentFrame
-
-	local versionLabel = Instance.new("TextLabel")
-	versionLabel.Size = UDim2.fromOffset(100, 20)
-	versionLabel.BackgroundTransparency = 1
-	versionLabel.TextXAlignment = Enum.TextXAlignment.Left
-	versionLabel.Text = "Version: v" .. Version.Value
-	versionLabel.LayoutOrder = 1
-	--versionLabel.Parent = parentFrame
-	GuiUtilities.syncGuiElementFontColor(versionLabel)
-
-	local textFormat = "Packages Location: \"%s\""
-	local textLabel = Instance.new("TextLabel")
-	textLabel.Size = UDim2.fromOffset(100, 20)
-	textLabel.Text = ""
-	textLabel.BackgroundTransparency = 1
-	textLabel.TextXAlignment = Enum.TextXAlignment.Left
-	textLabel.LayoutOrder = 2
-
-	--textLabel.Parent = parentFrame
-
-	local serverTextFormat = "Server Packages Location: \"%s\""
-	local serverTextLabel = Instance.new("TextLabel")
-	serverTextLabel.Size = UDim2.fromOffset(100, 20)
-	serverTextLabel.Text = ""
-	serverTextLabel.BackgroundTransparency = 1
-	serverTextLabel.TextXAlignment = Enum.TextXAlignment.Left
-	serverTextLabel.LayoutOrder = 3
-
-	--serverTextLabel.Parent = parentFrame
-
-	local function update()
-		local packageLocation = Config:GetPackageLocation()
-		textLabel.Text = string.format(
-			textFormat,
-			packageLocation and Config:GetRawLocation(packageLocation)
-			or " --- ")
-
-		local serverLocation = Config:GetServerPackageLocation()
-		serverTextLabel.Text = string.format(
-			serverTextFormat,
-			serverLocation and Config:GetRawLocation(serverLocation)
-			or "---")
+		self:setState({
+			Results = props.results or {}
+		})
 	end
 
-	Config.Changed:Connect(update)
-	update()
+	function SearchMenu:_rowCallback(index: number, scope: string, name: string)
+		local results = table.clone(self.state.Results)
+		local row: RowData = results[index]
 
-	GuiUtilities.syncGuiElementFontColor(textLabel)
-	GuiUtilities.syncGuiElementFontColor(serverTextLabel)
+		row.MetaData = row.MetaData or self.props.rowCallback(scope, name)
+		row.IsOpen = not row.IsOpen
 
+		self:setState({
+			Results = results
+		})
+	end
+
+	function SearchMenu:_searchCallback(text: string)
+
+		local packageResults = self.props.searchCallback(text)
+		local results: {RowData} = {}
+		for index, description in packageResults do
+			table.insert(results, {
+				Description = description,
+				MetaData = nil,
+				IsOpen = false,
+				OnActivated = function(scope: string, name: string)
+					self:_rowCallback(index, scope, name)
+				end
+			})
+		end
+
+		self:setState({
+			Results = results
+		})
+	end
+
+	function SearchMenu:render()
+
+		local wallySearch = Roact.createElement(searchEntry, {
+			textBoxLabel = "search...",
+			buttonText = "Go",
+			callback = function(text: string)
+				self:_searchCallback(text)
+			end
+		})
+
+		return Roact.createFragment({
+			SearchBar = wallySearch,
+			["SearchResults"] = Roact.createElement(searchResults, {
+				RowsData = self.state.Results
+			})
+		})
+	end
+end
+
+local function settingsMenu(props: {
+		Version: string,
+		SharedLocation: string,
+		ServerLocation: string
+	})
+
+	local listLayout = Roact.createElement("UIListLayout")
+
+	local versionLabel = Roact.createElement("TextLabel", {
+		Size = UDim2.fromOffset(100, 20),
+		BackgroundTransparency = 1,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = `Version: v{props.Version}`,
+		LayoutOrder = 1
+	})
+
+	local textLabel = Roact.createElement("TextLabel", {
+		Size = UDim2.fromOffset(100, 20),
+		Text = `Packages Location: "{props.SharedLocation}"`,
+		BackgroundTransparency = 1,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = 2
+	})
+
+	local serverTextLabel = Roact.createElement("TextLabel", {
+		Size = UDim2.fromOffset(100, 20),
+		Text = `Server Packages Location: "{props.ServerLocation}"`,
+		BackgroundTransparency = 1,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = 3
+	})
+
+	return Roact.createFragment({
+		Layout = listLayout,
+		VersionLabel = versionLabel,
+		PackageLabel = textLabel,
+		ServerPackageLabel = serverTextLabel
+	})
 end
 
 local MenuComponent = Roact.Component:extend("Menu")
@@ -427,7 +422,7 @@ do
 
 			local newButton = Roact.createElement(menuButton, {
 				LayoutOrder = menuProps.LayoutOrder,
-				Image = menuProps.Image,
+				Text = menuProps.Text,
 				OnActivated = function()
 					self:setState({
 						CurrentMenu = menuName,
@@ -454,7 +449,6 @@ do
 			Size = UDim2.new(1, -10, 1, -45),
 			AnchorPoint = Vector2.new(0.5,1),
 			Position = UDim2.new(0.5, 0, 1, -5),
-			BackgroundTransparency = 0
 		}, {
 			ActiveMenu = self.state.MenuElement
 		})
@@ -469,53 +463,24 @@ do
 
 end
 
-
-function GUI:UpdateSearchResults(
-	resultsData: {PackageDescription},
-	rowCallback: (ResultRow) -> nil
-	)
-	
-	if not self.SearchResults then
-		return
-	end
-	
-	local searchFrame = self.SearchResults.Frame
-	
-	for _, child in searchFrame:GetChildren() do
-		if child:IsA("Frame") then
-			child:Destroy()
-		end
-	end
-	
-	for _, description in resultsData do
-		local resultRow = ResultRow.new(description)
-		resultRow.Frame.Parent = searchFrame
-		resultRow.Activated:Connect(function()
-			if rowCallback then
-				rowCallback(resultRow)
-			end
-		end)
-	end
-	
-end
-
-function GUI:RegisterDownloadCallback(callback: (url: string) -> nil)
-	downloadCallback = callback
-end
-
 function GUI:Init(props: {
 		Plugin: any,
 		OnDownload: (url: string) -> nil,
 		OnBrowse: () -> nil,
-		OnWallySearch: (rawText: string) -> nil
+		OnWallySearch: (rawText: string) -> {PackageDescription},
+		OnWallyRow: (scope: string, name: string) -> PackageMetaData?
 	})
 
 	--selene: allow(unused_variable)
 	local toolbar, widget = createToolbar(props.Plugin)
 
+	local packageLocation = Config:GetPackageLocation()
+	local serverPackageLocation = Config:GetServerPackageLocation()
+
 	local menu = Roact.createElement(MenuComponent, {
 		Menus = {
 			Download = {
+				Text = "Download",
 				LayoutOrder = 2,
 				Element = Roact.createElement(downloadMenu, {
 					downloadCallback = props.OnDownload,
@@ -523,24 +488,29 @@ function GUI:Init(props: {
 				})
 			},
 			["Search Wally"] = {
+				Text = "Search Wally",
 				LayoutOrder = 3,
-				Element = Roact.createElement(searchMenu, {
-					searchCallback = props.OnWallySearch
+				Element = Roact.createElement(SearchMenu, {
+					searchCallback = props.OnWallySearch,
+					rowCallback = props.OnWallyRow
 				})
 			},
 			Settings = {
+				Text = "Settings",
 				LayoutOrder = 4,
-				Element = Roact.createElement(settingsMenu)
+				Element = Roact.createElement(settingsMenu, {
+					["Version"] = Version.Value,
+					SharedLocation = Config:GetRawLocation(packageLocation),
+					ServerLocation = Config:GetRawLocation(serverPackageLocation)
+				})
 			}
 		},
 		Default = DEFAULT_MENU
 	})
 
-	local app = Roact.createElement(blankFrame, nil, {
-		Menu = menu
-	})
 
-	Roact.mount(app, widget)
+
+	Roact.mount(menu, widget)
 
 end
 

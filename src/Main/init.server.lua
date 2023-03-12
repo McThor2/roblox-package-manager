@@ -46,24 +46,13 @@ local function onDownload(inputText: string)
 	Selection:Add(installedPackages)
 end
 
-local function onResultRow(row: GUI.ResultRow)
-
-	Logging:Debug(row)
-
-	local scope = row.Description.scope
-	local name = row.Description.name
-
-	if row.MetaData == nil then
-		Logging:Debug("set meta")
-		local metaData = WallyApi:GetMetaData(scope, name)
-		row:SetMetaData(metaData)
-	end
+local function onResultRow(scope: string, name: string): WallyApi.PackageMetaData?
+	return WallyApi:GetMetaData(scope, name)
 end
 
 local function onWallySearch(rawText: string)
 	local packagesInfo = WallyApi:ListPackages(rawText)
-	GUI:UpdateSearchResults(packagesInfo, onResultRow)
-
+	return packagesInfo
 end
 
 local function onBrowse()
@@ -99,7 +88,8 @@ local function init()
 		Plugin = plugin,
 		OnDownload = onDownload,
 		OnBrowse = onBrowse,
-		OnWallySearch = onWallySearch
+		OnWallySearch = onWallySearch,
+		OnWallyRow = onResultRow
 	})
 
 	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
