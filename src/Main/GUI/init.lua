@@ -2,7 +2,6 @@
 local WallyApi = require(script.Parent:WaitForChild("WallyApi"))
 local Version = require(script.Parent:WaitForChild("Version"))
 local Config = require(script.Parent:WaitForChild("Config"))
-local Logging = require(script.Parent.Logging)
 local Roact = require(script.Roact)
 
 type PackageDescription = WallyApi.PackageDescription
