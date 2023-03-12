@@ -40,6 +40,38 @@ local function blankFrame(props)
 	return Roact.createElement("Frame", props)
 end
 
+local function customTextButton(props)
+
+	local ImageIdDefault = "rbxasset://textures/TerrainTools/button_default.png"
+	local ImageIdHovered = "rbxasset://textures/TerrainTools/button_hover.png"
+	local ImageIdPressed = "rbxasset://textures/TerrainTools/button_pressed.png"
+
+	return Roact.createElement("ImageButton", {
+		LayoutOrder = props.LayoutOrder,
+		Size = props.Size,
+		AnchorPoint = props.AnchorPoint or Vector2.new(0, 0),
+		Position = props.Position or UDim2.fromScale(0, 0),
+
+		BackgroundTransparency = 1,
+		Image = ImageIdDefault,
+		HoverImage = ImageIdHovered,
+		PressedImage = ImageIdPressed,
+		ScaleType = Enum.ScaleType.Slice,
+		SliceCenter = Rect.new(7, 7, 156, 36),
+		AutoButtonColor = false,
+		[Roact.Event.Activated] = props[Roact.Event.Activated]
+	}, {
+		TextLabel = Roact.createElement("TextLabel", {
+			Text = props.Text,
+			TextSize = props.TextSize or 18,
+
+			Font = Enum.Font.SourceSans,
+			Size = UDim2.new(1, 0, 1, -5),
+			BackgroundTransparency = 1,
+		})
+	})
+end
+
 local openEvent = Instance.new("BindableEvent")
 GUI.Opened = openEvent.Event
 
@@ -83,8 +115,10 @@ local function scrollingTextInput(props: {
 	})
 
 	return Roact.createElement("ScrollingFrame", {
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
+		BackgroundTransparency = 0,
+		BackgroundColor3 = Color3.fromRGB(46, 46, 46),
+		BorderSizePixel = 1,
+		BorderColor3 = Color3.fromRGB(34, 34, 34),
 		CanvasSize = UDim2.fromScale(0, 0),
 		ScrollBarThickness = 0,
 		AutomaticCanvasSize = Enum.AutomaticSize.X,
@@ -92,12 +126,17 @@ local function scrollingTextInput(props: {
 		Position = props.Position
 	}, {
 		TextBox = Roact.createElement("TextBox", {
+			PlaceholderText = props.placeHolderText or "",
+			Text = props.defaultText or "",
+
+			PlaceholderColor3 = Color3.fromRGB(178, 178, 178),
+			TextColor3 = Color3.fromRGB(204, 204, 204),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			ClearTextOnFocus = false,
 			AutomaticSize = Enum.AutomaticSize.X,
 			Size = UDim2.fromScale(1, 1),
-			PlaceholderText = props.placeHolderText or "",
-			Text = props.defaultText or "",
 			[Roact.Ref] = props[Roact.Ref]
 		})
 	})
@@ -118,12 +157,12 @@ local function searchEntry(props: {
 		[Roact.Ref] = textRef
 	})
 
-	local button = Roact.createElement("TextButton", {
+	local button = Roact.createElement(customTextButton, {
 		AnchorPoint = Vector2.new(1,0),
 		Position = UDim2.new(1, -15, 0, 10),
 		Size = UDim2.fromOffset(100, 20),
-		TextSize = 14,
 		Text = props.buttonText,
+		TextSize = 15,
 		[Roact.Event.Activated] = function()
 			if props.callback then
 				props.callback(textRef:getValue().Text)
@@ -136,16 +175,6 @@ local function searchEntry(props: {
 	}, {
 		TextEntry = textEntry,
 		Button = button
-	})
-end
-
-local function menuButton(props)
-	return Roact.createElement("TextButton", {
-		Text = props.Text,
-		Size = UDim2.new(0, 100, 0, 30),
-		TextSize = 12,
-		LayoutOrder = props.LayoutOrder,
-		[Roact.Event.Activated] = props.OnActivated
 	})
 end
 
@@ -263,7 +292,7 @@ local function downloadMenu(props: {
 		callback = props.downloadCallback
 	})
 
-	local browseButton = Roact.createElement("TextButton", {
+	local browseButton = Roact.createElement(customTextButton, {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Size = UDim2.new(0, 150, 0, 20),
 		Position = UDim2.new(0.5, 0, 0, 35),
@@ -350,13 +379,18 @@ local function settingsMenu(props: {
 		ServerLocation: string
 	})
 
-	local listLayout = Roact.createElement("UIListLayout")
+	local listLayout = Roact.createElement("UIListLayout", {
+		SortOrder = Enum.SortOrder.LayoutOrder
+	})
+
+	local textColour = Color3.fromRGB(204, 204, 204)
 
 	local versionLabel = Roact.createElement("TextLabel", {
 		Size = UDim2.fromOffset(100, 20),
 		BackgroundTransparency = 1,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Text = `Version: v{props.Version}`,
+		TextColor3 = textColour,
 		LayoutOrder = 1
 	})
 
@@ -365,6 +399,7 @@ local function settingsMenu(props: {
 		Text = `Packages Location: "{props.SharedLocation}"`,
 		BackgroundTransparency = 1,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = textColour,
 		LayoutOrder = 2
 	})
 
@@ -373,6 +408,7 @@ local function settingsMenu(props: {
 		Text = `Server Packages Location: "{props.ServerLocation}"`,
 		BackgroundTransparency = 1,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = textColour,
 		LayoutOrder = 3
 	})
 
@@ -420,10 +456,11 @@ do
 		local menuFrames = {}
 		for menuName, menuProps in self.props.Menus do
 
-			local newButton = Roact.createElement(menuButton, {
+			local newButton = Roact.createElement(customTextButton, {
+				Size = UDim2.new(0, 100, 1, -10),
 				LayoutOrder = menuProps.LayoutOrder,
 				Text = menuProps.Text,
-				OnActivated = function()
+				[Roact.Event.Activated] = function()
 					self:setState({
 						CurrentMenu = menuName,
 						MenuElement = menuProps.Element
@@ -452,8 +489,6 @@ do
 		}, {
 			ActiveMenu = self.state.MenuElement
 		})
-
-		Logging:Debug(self.state.CurrentMenu)
 
 		return Roact.createElement(blankFrame, {}, {
 			TopPanel = topBar,
