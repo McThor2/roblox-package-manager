@@ -287,7 +287,7 @@ do
 
 end
 
-local function downloadsMenu(props: {
+local function downloadMenu(props: {
 		downloadCallback: ((url: string) -> nil)?,
 		browseCallback: (() -> nil)?
 	})
@@ -517,7 +517,7 @@ function GUI:Init(props: {
 		Menus = {
 			Download = {
 				LayoutOrder = 2,
-				Element = Roact.createElement(downloadsMenu, {
+				Element = Roact.createElement(downloadMenu, {
 					downloadCallback = props.OnDownload,
 					browseCallback = props.OnBrowse
 				})
