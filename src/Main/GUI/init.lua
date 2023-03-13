@@ -25,20 +25,69 @@ local DEFAULT_MENU = "Download"
 
 local SETTINGS_ICON = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png"
 
-local function blankFrame(props)
+local StudioSettings = settings().Studio
 
-	local defaultProps = {
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Size = UDim2.fromScale(1, 1)
+type Theme = {
+	Background: Color3,
+	InputBackground: Color3,
+	TextColour: Color3,
+	Border: Color3,
+	PlaceHolderText: Color3
+}
+local function getCurrentTheme(): Theme
+	local theme = StudioSettings.Theme
+	return {
+		Background = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
+		InputBackground = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
+		TextColour = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
+		Border = theme:GetColor(Enum.StudioStyleGuideColor.Border),
+		PlaceHolderText = theme:GetColor(Enum.StudioStyleGuideColor.DimmedText)
 	}
+end
 
-	for k, v in defaultProps do
-		if props[k] then continue end
-		props[k] = v
+local ThemeContext = Roact.createContext(getCurrentTheme())
+
+local ThemeController = Roact.Component:extend("ThemeController")
+do
+	function ThemeController:init()
+		self:setState({
+			theme = getCurrentTheme()
+		})
+
+		StudioSettings.ThemeChanged:Connect(function()
+			self:setState({
+				theme = getCurrentTheme()
+			})
+		end)
 	end
 
-	return Roact.createElement("Frame", props)
+	function ThemeController:render()
+		return Roact.createElement(ThemeContext.Provider, {
+			value = self.state.theme,
+		}, self.props[Roact.Children])
+	end
+end
+
+local function blankFrame(props)
+	return Roact.createElement(ThemeContext.Consumer, {
+		render = function(theme: Theme)
+
+			local defaultProps = {
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				Size = UDim2.fromScale(1, 1),
+				BackgroundColor3 = theme.Background,
+				BorderColor3 = theme.Border
+			}
+
+			for k, v in defaultProps do
+				if props[k] then continue end
+				props[k] = v
+			end
+
+			return Roact.createElement("Frame", props)
+		end
+	})
 end
 
 local function customTextButton(props)
@@ -89,20 +138,28 @@ local function createToolbar(plugin)
 		WIDGET_MIN_HEIGHT     -- Minimum height of the floating window
 	)
 
-	local widget = plugin:CreateDockWidgetPluginGui(WIDGET_TITLE, widgetInfo)
+	local widget: DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui(WIDGET_TITLE, widgetInfo)
 	widget.Title = WIDGET_TITLE
 
-	local button = toolbar:CreateButton("Open RPM GUI", "Opens the Roblox Package Manager GUI", ICON_ID)
+	local button = toolbar:CreateButton(
+		"Open RPM GUI", "Opens the Roblox Package Manager GUI", ICON_ID)
 	button.ClickableWhenViewportHidden = true
 
-	local function openGui()
+	local function onClick()
 		if not widget.Enabled then
 			openEvent:Fire()
 		end
-		widget.Enabled = true
+		widget.Enabled = not widget.Enabled
+		--button:SetActive(widget.Enabled)
 	end
 
-	button.Click:Connect(openGui)
+	button:SetActive(widget.Enabled)
+
+	button.Click:Connect(onClick)
+
+	widget:GetPropertyChangedSignal("Enabled"):Connect(function()
+		button:SetActive(widget.Enabled)
+	end)
 
 	return toolbar, widget
 end
@@ -180,39 +237,43 @@ local function scrollingTextInput(props: {
 		)
 	end
 
-	return Roact.createElement("ScrollingFrame", {
-		BackgroundTransparency = 0,
-		BackgroundColor3 = Color3.fromRGB(46, 46, 46),
-		BorderSizePixel = 1,
-		BorderColor3 = Color3.fromRGB(34, 34, 34),
-		CanvasSize = UDim2.fromScale(0, 0),
-		ScrollBarThickness = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.None,
-		Size = props.Size,
-		Position = props.Position,
-		[Roact.Ref] = frameRef
-	}, {
-		TextBox = Roact.createElement("TextBox", {
-			PlaceholderText = props.placeHolderText or "",
-			Text = props.defaultText or "",
+	return Roact.createElement(ThemeContext.Consumer, {
+		render = function(theme: Theme)
+			return Roact.createElement("ScrollingFrame", {
+				BackgroundTransparency = 0,
+				BackgroundColor3 = theme.InputBackground,
+				BorderSizePixel = 1,
+				BorderColor3 = theme.Border,
+				CanvasSize = UDim2.fromScale(0, 0),
+				ScrollBarThickness = 0,
+				AutomaticCanvasSize = Enum.AutomaticSize.None,
+				Size = props.Size,
+				Position = props.Position,
+				[Roact.Ref] = frameRef
+			}, {
+				TextBox = Roact.createElement("TextBox", {
+					PlaceholderText = props.placeHolderText or "",
+					Text = props.defaultText or "",
 
-			PlaceholderColor3 = Color3.fromRGB(178, 178, 178),
-			TextColor3 = Color3.fromRGB(204, 204, 204),
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			ClearTextOnFocus = false,
-			AutomaticSize = Enum.AutomaticSize.X,
+					PlaceholderColor3 = theme.PlaceHolderText,
+					TextColor3 = theme.TextColour,
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					ClearTextOnFocus = false,
+					AutomaticSize = Enum.AutomaticSize.X,
 
-			Size = UDim2.new(1, -10, 1, -5),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 3, 0.5, 0),
+					Size = UDim2.new(1, -10, 1, -5),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.new(0.5, 3, 0.5, 0),
 
-			[Roact.Ref] = props[Roact.Ref],
-			[Roact.Change.TextBounds] = updateCanvasPosition,
-			[Roact.Change.CursorPosition] = updateCanvasPosition,
-			[Roact.Change.AbsoluteSize] = updateCanvasSize,
-		})
+					[Roact.Ref] = props[Roact.Ref],
+					[Roact.Change.TextBounds] = updateCanvasPosition,
+					[Roact.Change.CursorPosition] = updateCanvasPosition,
+					[Roact.Change.AbsoluteSize] = updateCanvasSize,
+				})
+			})
+		end
 	})
 end
 
@@ -453,45 +514,49 @@ local function settingsMenu(props: {
 		ServerLocation: string
 	})
 
-	local listLayout = Roact.createElement("UIListLayout", {
-		SortOrder = Enum.SortOrder.LayoutOrder
+	return Roact.createElement(ThemeContext.Consumer, {
+		render = function(theme: Theme)
+
+			local listLayout = Roact.createElement("UIListLayout", {
+				SortOrder = Enum.SortOrder.LayoutOrder
+			})
+
+			local versionLabel = Roact.createElement("TextLabel", {
+				Size = UDim2.fromOffset(100, 20),
+				BackgroundTransparency = 1,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Text = `Version: v{props.Version}`,
+				TextColor3 = theme.TextColour,
+				LayoutOrder = 1
+			})
+
+			local textLabel = Roact.createElement("TextLabel", {
+				Size = UDim2.fromOffset(100, 20),
+				Text = `Packages Location: "{props.SharedLocation}"`,
+				BackgroundTransparency = 1,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextColor3 = theme.TextColour,
+				LayoutOrder = 2
+			})
+
+			local serverTextLabel = Roact.createElement("TextLabel", {
+				Size = UDim2.fromOffset(100, 20),
+				Text = `Server Packages Location: "{props.ServerLocation}"`,
+				BackgroundTransparency = 1,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextColor3 = theme.TextColour,
+				LayoutOrder = 3
+			})
+
+			return Roact.createFragment({
+				Layout = listLayout,
+				VersionLabel = versionLabel,
+				PackageLabel = textLabel,
+				ServerPackageLabel = serverTextLabel
+			})
+		end
 	})
 
-	local textColour = Color3.fromRGB(204, 204, 204)
-
-	local versionLabel = Roact.createElement("TextLabel", {
-		Size = UDim2.fromOffset(100, 20),
-		BackgroundTransparency = 1,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Text = `Version: v{props.Version}`,
-		TextColor3 = textColour,
-		LayoutOrder = 1
-	})
-
-	local textLabel = Roact.createElement("TextLabel", {
-		Size = UDim2.fromOffset(100, 20),
-		Text = `Packages Location: "{props.SharedLocation}"`,
-		BackgroundTransparency = 1,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = textColour,
-		LayoutOrder = 2
-	})
-
-	local serverTextLabel = Roact.createElement("TextLabel", {
-		Size = UDim2.fromOffset(100, 20),
-		Text = `Server Packages Location: "{props.ServerLocation}"`,
-		BackgroundTransparency = 1,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = textColour,
-		LayoutOrder = 3
-	})
-
-	return Roact.createFragment({
-		Layout = listLayout,
-		VersionLabel = versionLabel,
-		PackageLabel = textLabel,
-		ServerPackageLabel = serverTextLabel
-	})
 end
 
 local MenuComponent = Roact.Component:extend("Menu")
@@ -559,7 +624,7 @@ do
 		local bottomFrame = Roact.createElement(blankFrame, {
 			Size = UDim2.new(1, -10, 1, -45),
 			AnchorPoint = Vector2.new(0.5,1),
-			Position = UDim2.new(0.5, 0, 1, -5),
+			Position = UDim2.new(0.5, 0, 1, -5)
 		}, {
 			ActiveMenu = self.state.MenuElement
 		})
@@ -571,6 +636,8 @@ do
 	end
 
 end
+
+
 
 function GUI:Init(props: {
 		Plugin: any,
@@ -617,9 +684,11 @@ function GUI:Init(props: {
 		Default = DEFAULT_MENU
 	})
 
+	local themedMenu = Roact.createElement(ThemeController, {}, {
+		Menu = menu
+	})
 
-
-	Roact.mount(menu, widget)
+	Roact.mount(themedMenu, widget)
 
 end
 
