@@ -4,10 +4,14 @@ local Version = require(script.Parent:WaitForChild("Version"))
 local Config = require(script.Parent:WaitForChild("Config"))
 local Roact = require(script.Roact)
 
+local ThemeContext = require(script.ThemeContext)
+local ThemeController = require(script.ThemeController)
+
 local TextService = game:GetService("TextService")
 
 type PackageDescription = WallyApi.PackageDescription
 type PackageMetaData = WallyApi.PackageMetaData
+type Theme = ThemeContext.Theme
 
 local GUI = {}
 
@@ -23,50 +27,7 @@ local WIDGET_MIN_HEIGHT = 200
 
 local DEFAULT_MENU = "Download"
 
-local SETTINGS_ICON = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png"
-
-local StudioSettings = settings().Studio
-
-type Theme = {
-	Background: Color3,
-	InputBackground: Color3,
-	TextColour: Color3,
-	Border: Color3,
-	PlaceHolderText: Color3
-}
-local function getCurrentTheme(): Theme
-	local theme = StudioSettings.Theme
-	return {
-		Background = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
-		InputBackground = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
-		TextColour = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-		Border = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-		PlaceHolderText = theme:GetColor(Enum.StudioStyleGuideColor.DimmedText)
-	}
-end
-
-local ThemeContext = Roact.createContext(getCurrentTheme())
-
-local ThemeController = Roact.Component:extend("ThemeController")
-do
-	function ThemeController:init()
-		self:setState({
-			theme = getCurrentTheme()
-		})
-
-		StudioSettings.ThemeChanged:Connect(function()
-			self:setState({
-				theme = getCurrentTheme()
-			})
-		end)
-	end
-
-	function ThemeController:render()
-		return Roact.createElement(ThemeContext.Provider, {
-			value = self.state.theme,
-		}, self.props[Roact.Children])
-	end
-end
+--local SETTINGS_ICON = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png"
 
 local function blankFrame(props)
 	return Roact.createElement(ThemeContext.Consumer, {
@@ -636,8 +597,6 @@ do
 	end
 
 end
-
-
 
 function GUI:Init(props: {
 		Plugin: any,
