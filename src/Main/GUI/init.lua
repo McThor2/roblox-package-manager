@@ -4,6 +4,8 @@ local Version = require(script.Parent:WaitForChild("Version"))
 local Config = require(script.Parent:WaitForChild("Config"))
 local Roact = require(script.Roact)
 
+local TextService = game:GetService("TextService")
+
 type PackageDescription = WallyApi.PackageDescription
 type PackageMetaData = WallyApi.PackageMetaData
 
@@ -113,6 +115,71 @@ local function scrollingTextInput(props: {
 		[Roact.Ref]: Roact.Ref
 	})
 
+	props[Roact.Ref] = props[Roact.Ref] or Roact.createRef()
+
+	local ref = props[Roact.Ref]
+	local frameRef = Roact.createRef()
+
+	local function updateCanvasPosition()
+		local textBox: TextBox? = ref:getValue()
+		local frame: ScrollingFrame? = frameRef:getValue()
+		if not textBox or not frame then
+			return
+		end
+
+		local cursorPos = textBox.CursorPosition
+
+		if cursorPos == -1 then
+			return
+		end
+
+		local textBounds = textBox.TextBounds
+
+		if textBounds.X < frame.AbsoluteSize.X then
+			return
+		end
+
+		-- Check if cursor is within visible region
+
+		local leftString = string.sub(textBox.Text, 1, cursorPos-1)
+		local leftSize = TextService:GetTextSize(
+			leftString,
+			textBox.TextSize,
+			textBox.Font,
+			Vector2.new(1_000, 200)
+		)
+
+		local xOffset = leftSize.X - frame.CanvasPosition.X
+
+		local isVisible = (
+			xOffset > 0 and
+			xOffset < frame.AbsoluteSize.X - 5
+		)
+
+		local delta = xOffset > 0 and xOffset - frame.AbsoluteSize.X + 15  or xOffset
+
+		if not isVisible then
+			frame.CanvasPosition = Vector2.new(
+				frame.CanvasPosition.X + delta,
+				0
+			)
+		end
+
+	end
+
+	local function updateCanvasSize()
+		local textBox: TextBox? = ref:getValue()
+		local frame: ScrollingFrame? = frameRef:getValue()
+		if not textBox or not frame then
+			return
+		end
+
+		frame.CanvasSize = UDim2.fromOffset(
+			textBox.AbsoluteSize.X + 10,
+			0
+		)
+	end
+
 	return Roact.createElement("ScrollingFrame", {
 		BackgroundTransparency = 0,
 		BackgroundColor3 = Color3.fromRGB(46, 46, 46),
@@ -120,9 +187,10 @@ local function scrollingTextInput(props: {
 		BorderColor3 = Color3.fromRGB(34, 34, 34),
 		CanvasSize = UDim2.fromScale(0, 0),
 		ScrollBarThickness = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		AutomaticCanvasSize = Enum.AutomaticSize.None,
 		Size = props.Size,
-		Position = props.Position
+		Position = props.Position,
+		[Roact.Ref] = frameRef
 	}, {
 		TextBox = Roact.createElement("TextBox", {
 			PlaceholderText = props.placeHolderText or "",
@@ -135,8 +203,15 @@ local function scrollingTextInput(props: {
 			TextXAlignment = Enum.TextXAlignment.Left,
 			ClearTextOnFocus = false,
 			AutomaticSize = Enum.AutomaticSize.X,
-			Size = UDim2.fromScale(1, 1),
-			[Roact.Ref] = props[Roact.Ref]
+
+			Size = UDim2.new(1, -10, 1, -5),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, 3, 0.5, 0),
+
+			[Roact.Ref] = props[Roact.Ref],
+			[Roact.Change.TextBounds] = updateCanvasPosition,
+			[Roact.Change.CursorPosition] = updateCanvasPosition,
+			[Roact.Change.AbsoluteSize] = updateCanvasSize,
 		})
 	})
 end
