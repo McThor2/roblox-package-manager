@@ -242,7 +242,7 @@ end
 function PackageManager:InstallArchive(file: File)
 
 	local content = file:GetBinaryContents()
-	local success, path = pcall(VirtualPath.fromZip, VirtualPath, content)
+	local success, path = pcall(VirtualPath.fromZip, content)
 	if not success then
 		Logging:Warning(`Failed to unzip archive {file}`)
 		Logging:Debug(path)
