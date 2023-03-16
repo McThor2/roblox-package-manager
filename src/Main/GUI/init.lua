@@ -83,9 +83,6 @@ local function customTextButton(props)
 	})
 end
 
-local openEvent = Instance.new("BindableEvent")
-GUI.Opened = openEvent.Event
-
 local function createToolbar(plugin)
 	local toolbar = plugin:CreateToolbar(WIDGET_TITLE)
 
@@ -108,9 +105,6 @@ local function createToolbar(plugin)
 	button.ClickableWhenViewportHidden = true
 
 	local function onClick()
-		if not widget.Enabled then
-			openEvent:Fire()
-		end
 		widget.Enabled = not widget.Enabled
 		--button:SetActive(widget.Enabled)
 	end
@@ -242,22 +236,24 @@ end
 local function searchEntry(props: {
 		textBoxLabel: string,
 		buttonText: string,
-		callback: (text: string) -> nil
+		callback: (text: string) -> nil,
+		size: UDim2,
+		position: UDim2
 	})
 
 	local textRef = Roact.createRef()
 
 	local textEntry = Roact.createElement(scrollingTextInput, {
-		Position = UDim2.fromOffset(10, 10),
-		Size = UDim2.new(1, -140, 0, 20),
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.new(1, -140, 1, 0),
 		placeHolderText = props.textBoxLabel,
 		[Roact.Ref] = textRef
 	})
 
 	local button = Roact.createElement(customTextButton, {
 		AnchorPoint = Vector2.new(1,0),
-		Position = UDim2.new(1, -15, 0, 10),
-		Size = UDim2.fromOffset(100, 20),
+		Position = UDim2.new(1, -15, 0, 0),
+		Size = UDim2.new(0, 100, 1, 0),
 		Text = props.buttonText,
 		TextSize = 15,
 		[Roact.Event.Activated] = function()
@@ -268,7 +264,8 @@ local function searchEntry(props: {
 	})
 
 	return Roact.createElement(blankFrame, {
-		Size = UDim2.new(1, 0, 0, 20)
+		Size = props.size or UDim2.new(1, 0, 0, 20),
+		Position = props.position or UDim2.new(0,0,0,0)
 	}, {
 		TextEntry = textEntry,
 		Button = button
@@ -386,13 +383,14 @@ local function downloadMenu(props: {
 	local downloadEntry = Roact.createElement(searchEntry, {
 		textBoxLabel = "<scope>/<name>@<version>",
 		buttonText = "Download",
-		callback = props.downloadCallback
+		callback = props.downloadCallback,
+		position = UDim2.fromOffset(10, 10)
 	})
 
 	local browseButton = Roact.createElement(customTextButton, {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Size = UDim2.new(0, 150, 0, 20),
-		Position = UDim2.new(0.5, 0, 0, 35),
+		Position = UDim2.new(0.5, 0, 0, 40),
 		BackgroundTransparency = 1,
 		Text = "Browse files",
 		TextSize = 15,
@@ -458,7 +456,8 @@ do
 			buttonText = "Go",
 			callback = function(text: string)
 				self:_searchCallback(text)
-			end
+			end,
+			position = UDim2.fromOffset(10, 10)
 		})
 
 		return Roact.createFragment({
@@ -575,8 +574,8 @@ do
 		local buttons = Roact.createFragment(menuFrames)
 
 		local topBar = Roact.createElement(blankFrame, {
-			Size = UDim2.new(1,0,0,40),
-			Position = UDim2.fromScale(0,0)
+			Size = UDim2.new(1,-5,0,40),
+			Position = UDim2.fromOffset(5,0)
 		}, {
 			Layout = uiLayout,
 			Icon = iconImage,
