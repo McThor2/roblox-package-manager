@@ -101,6 +101,7 @@ local function createToolbar(plugin)
 
 	local widget: DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui(WIDGET_TITLE, widgetInfo)
 	widget.Title = WIDGET_TITLE
+	widget.Name = WIDGET_TITLE
 
 	local button = toolbar:CreateButton(
 		"Open RPM GUI", "Opens the Roblox Package Manager GUI", ICON_ID)
