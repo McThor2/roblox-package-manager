@@ -30,6 +30,8 @@ for k, v in LOCATION_LOOKUP do
     INVERTED_LOCATION_LOOKUP[v] = k
 end
 
+local Logging = require(script.Parent.Logging)
+
 Config._decoded = nil
 
 local changedEvent = Instance.new("BindableEvent")
@@ -84,7 +86,7 @@ function Config:Save()
 
     local encodedConfig = HttpService:JSONEncode(self._decoded)
 
-    print("set", encodedConfig)
+    Logging:Debug("set", encodedConfig)
     configInstance:SetAttribute(
         CONFIG_ATTRIBUTE_NAME,
         encodedConfig
@@ -102,8 +104,8 @@ function Config:Load()
     end)
 
     if not success then
-        warn("Invalid RPM config detected - ")
-        warn(config)
+        Logging:Warning("Invalid RPM config detected - ")
+        Logging:Warning(config)
         return
     end
 
@@ -121,8 +123,8 @@ function Config:Set(key, value)
     end)
 
     if not success then
-        warn("Invalid config key/value - ", key, value)
-        warn(encodedConfig)
+        Logging:Warning("Invalid config key/value - ", key, value)
+        Logging:Warning(encodedConfig)
         return
     end
 
@@ -134,7 +136,7 @@ end
 function Config:Get(key)
 
     if not self._decoded then
-        warn("Config not loaded")
+        Logging:Warning("Config not loaded")
         return nil
     end
 
@@ -151,7 +153,7 @@ function Config:GetRawLocation(object: Instance)
 		object = object.Parent
 
         if object.Parent == game and INVERTED_LOCATION_LOOKUP[object] ~= nil then
-            error(`Invalid root location for package: {object}`)
+            Logging:Error(`Invalid root location for package: {object}`)
         end
 	end
 	return result
