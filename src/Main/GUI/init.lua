@@ -27,7 +27,17 @@ local WIDGET_MIN_HEIGHT = 200
 
 local DEFAULT_MENU = "Download"
 
---local SETTINGS_ICON = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png"
+local SETTINGS_ICON = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png" --45x45
+local IMPORT_ICON = "rbxasset://textures/StudioSharedUI/import@2x.png" -- 48x48
+local SEARCH_ICON = "rbxasset://textures/DevConsole/Search.png" -- 26x26
+
+local function setDefaults(props, defaultProps)
+	props = table.clone(props)
+	for k, v in defaultProps do
+		props[k] = props[k] or v
+	end
+	return props
+end
 
 local function blankFrame(props)
 	return Roact.createElement(ThemeContext.Consumer, {
@@ -80,6 +90,35 @@ local function customTextButton(props)
 			Size = UDim2.new(1, 0, 1, -5),
 			BackgroundTransparency = 1,
 		})
+	})
+end
+
+local function customImageButton(props)
+	return Roact.createElement(ThemeContext.Consumer, {
+		render = function(theme: Theme)
+
+			props = setDefaults(props, {
+				Image = SETTINGS_ICON,
+				BackgroundTransparency = 0,
+				ScaleType = Enum.ScaleType.Fit,
+				BackgroundColor3 = theme.Background,
+				BorderSizePixel = 0,
+			})
+
+			return Roact.createElement("ImageButton",
+				props,
+				{
+					Corner = Roact.createElement("UICorner", {
+						CornerRadius = UDim.new(0, 4)
+					}),
+					AspectRatio = Roact.createElement("UIAspectRatioConstraint", {
+						AspectRatio = 1,
+						AspectType = Enum.AspectType.ScaleWithParentSize,
+						DominantAxis = Enum.DominantAxis.Height
+					})
+				}
+			)
+		end
 	})
 end
 
@@ -556,10 +595,11 @@ do
 		local menuFrames = {}
 		for menuName, menuProps in self.props.Menus do
 
-			local newButton = Roact.createElement(customTextButton, {
-				Size = UDim2.new(0, 100, 1, -10),
+			local newButton = Roact.createElement(customImageButton, {
+				Size = UDim2.new(0, 50, 1, -10),
 				LayoutOrder = menuProps.LayoutOrder,
-				Text = menuProps.Text,
+				Image = menuProps.Image,
+				--Text = menuProps.Text,
 				[Roact.Event.Activated] = function()
 					self:setState({
 						CurrentMenu = menuName,
@@ -616,6 +656,7 @@ function GUI:Init(props: {
 		Menus = {
 			Download = {
 				Text = "Download",
+				Image = IMPORT_ICON,
 				LayoutOrder = 2,
 				Element = Roact.createElement(downloadMenu, {
 					downloadCallback = props.OnDownload,
@@ -624,6 +665,7 @@ function GUI:Init(props: {
 			},
 			["Search Wally"] = {
 				Text = "Search Wally",
+				Image = SEARCH_ICON,
 				LayoutOrder = 3,
 				Element = Roact.createElement(SearchMenu, {
 					searchCallback = props.OnWallySearch,
@@ -632,6 +674,7 @@ function GUI:Init(props: {
 			},
 			Settings = {
 				Text = "Settings",
+				Image = SETTINGS_ICON,
 				LayoutOrder = 4,
 				Element = Roact.createElement(settingsMenu, {
 					["Version"] = Version.Value,
