@@ -93,20 +93,26 @@ local function customTextButton(props)
 	})
 end
 
-local function customImageButton(props)
+local function customImageButton(props: {
+	Image: string,
+	ImagePadding: Vector2,
+	Size: UDim2,
+	LayoutOrder: number,
+	[Roact.Symbol]: () -> nil,
+	})
+
 	return Roact.createElement(ThemeContext.Consumer, {
 		render = function(theme: Theme)
 
-			props = setDefaults(props, {
-				Image = SETTINGS_ICON,
-				BackgroundTransparency = 0,
-				ScaleType = Enum.ScaleType.Fit,
-				BackgroundColor3 = theme.Background,
-				BorderSizePixel = 0,
-			})
-
 			return Roact.createElement("ImageButton",
-				props,
+				{
+					Size = props.Size,
+					LayoutOrder = props.LayoutOrder,
+					BackgroundTransparency = 0,
+					BackgroundColor3 = theme.Background,
+					BorderSizePixel = 0,
+					[Roact.Event.Activated] = props[Roact.Event.Activated]
+				},
 				{
 					Corner = Roact.createElement("UICorner", {
 						CornerRadius = UDim.new(0, 4)
@@ -115,6 +121,15 @@ local function customImageButton(props)
 						AspectRatio = 1,
 						AspectType = Enum.AspectType.ScaleWithParentSize,
 						DominantAxis = Enum.DominantAxis.Height
+					}),
+					Roact.createElement("ImageLabel", {
+						BackgroundTransparency = 1,
+						ScaleType = Enum.ScaleType.Fit,
+						BorderSizePixel = 0,
+						Image = props.Image,
+						Size = UDim2.new(1, -props.ImagePadding.X, 1, -props.ImagePadding.Y),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.fromScale(0.5, 0.5)
 					})
 				}
 			)
@@ -599,7 +614,7 @@ do
 				Size = UDim2.new(0, 50, 1, -10),
 				LayoutOrder = menuProps.LayoutOrder,
 				Image = menuProps.Image,
-				--Text = menuProps.Text,
+				ImagePadding = menuProps.ImagePadding,
 				[Roact.Event.Activated] = function()
 					self:setState({
 						CurrentMenu = menuName,
@@ -657,6 +672,7 @@ function GUI:Init(props: {
 			Download = {
 				Text = "Download",
 				Image = IMPORT_ICON,
+				ImagePadding = Vector2.new(5, 5),
 				LayoutOrder = 2,
 				Element = Roact.createElement(downloadMenu, {
 					downloadCallback = props.OnDownload,
@@ -666,6 +682,7 @@ function GUI:Init(props: {
 			["Search Wally"] = {
 				Text = "Search Wally",
 				Image = SEARCH_ICON,
+				ImagePadding = Vector2.new(7, 7),
 				LayoutOrder = 3,
 				Element = Roact.createElement(SearchMenu, {
 					searchCallback = props.OnWallySearch,
@@ -675,6 +692,7 @@ function GUI:Init(props: {
 			Settings = {
 				Text = "Settings",
 				Image = SETTINGS_ICON,
+				ImagePadding = Vector2.new(0, 0),
 				LayoutOrder = 4,
 				Element = Roact.createElement(settingsMenu, {
 					["Version"] = Version.Value,
