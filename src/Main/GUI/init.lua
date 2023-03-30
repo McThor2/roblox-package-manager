@@ -93,46 +93,76 @@ local function customTextButton(props)
 	})
 end
 
-local function customImageButton(props: {
+local CustomImageButton = Roact.Component:extend("CustomImageButton")
+
+function CustomImageButton:init(props: {
 	Image: string,
 	ImagePadding: Vector2,
 	Size: UDim2,
 	LayoutOrder: number,
+	Description: string?,
 	[Roact.Symbol]: () -> nil,
 	})
+	self:setState({
+		descriptionVisible = false
+	})
+end
 
+function CustomImageButton:_render(theme: Theme)
+
+	local descriptionVisible = (self.props.Description ~= nil) and self.state.descriptionVisible	
+
+	return Roact.createElement("ImageButton",
+		{
+			Size = self.props.Size,
+			LayoutOrder = self.props.LayoutOrder,
+			BackgroundTransparency = 0,
+			BackgroundColor3 = theme.Background,
+			BorderSizePixel = 0,
+			[Roact.Event.Activated] = self.props[Roact.Event.Activated],
+			[Roact.Event.MouseEnter] = function()
+				self:setState({descriptionVisible = true})
+			end,
+			[Roact.Event.MouseLeave] = function()
+				self:setState({descriptionVisible = false})
+			end,
+		},
+		{
+			Corner = Roact.createElement("UICorner", {
+				CornerRadius = UDim.new(0, 4)
+			}),
+			AspectRatio = Roact.createElement("UIAspectRatioConstraint", {
+				AspectRatio = 1,
+				AspectType = Enum.AspectType.ScaleWithParentSize,
+				DominantAxis = Enum.DominantAxis.Height
+			}),
+			Icon = Roact.createElement("ImageLabel", {
+				BackgroundTransparency = 1,
+				ScaleType = Enum.ScaleType.Fit,
+				BorderSizePixel = 0,
+				Image = self.props.Image,
+				Size = UDim2.new(1, -self.props.ImagePadding.X, 1, -self.props.ImagePadding.Y),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5)
+			}),
+			Description = Roact.createElement("TextLabel", {
+				Text = self.props.Description or "",
+				Visible = descriptionVisible,
+				Position = UDim2.new(0, 0, 1, 5),
+				Size = UDim2.fromOffset(100, 25),
+				BackgroundColor3 = theme.Background,
+				BorderColor3 = theme.Border,
+				TextColor3 = theme.TextColour,
+				ZIndex = 100,
+			})
+		}
+	)
+end
+
+function CustomImageButton:render()
 	return Roact.createElement(ThemeContext.Consumer, {
 		render = function(theme: Theme)
-
-			return Roact.createElement("ImageButton",
-				{
-					Size = props.Size,
-					LayoutOrder = props.LayoutOrder,
-					BackgroundTransparency = 0,
-					BackgroundColor3 = theme.Background,
-					BorderSizePixel = 0,
-					[Roact.Event.Activated] = props[Roact.Event.Activated]
-				},
-				{
-					Corner = Roact.createElement("UICorner", {
-						CornerRadius = UDim.new(0, 4)
-					}),
-					AspectRatio = Roact.createElement("UIAspectRatioConstraint", {
-						AspectRatio = 1,
-						AspectType = Enum.AspectType.ScaleWithParentSize,
-						DominantAxis = Enum.DominantAxis.Height
-					}),
-					Roact.createElement("ImageLabel", {
-						BackgroundTransparency = 1,
-						ScaleType = Enum.ScaleType.Fit,
-						BorderSizePixel = 0,
-						Image = props.Image,
-						Size = UDim2.new(1, -props.ImagePadding.X, 1, -props.ImagePadding.Y),
-						AnchorPoint = Vector2.new(0.5, 0.5),
-						Position = UDim2.fromScale(0.5, 0.5)
-					})
-				}
-			)
+			return self:_render(theme)
 		end
 	})
 end
@@ -610,11 +640,12 @@ do
 		local menuFrames = {}
 		for menuName, menuProps in self.props.Menus do
 
-			local newButton = Roact.createElement(customImageButton, {
+			local newButton = Roact.createElement(CustomImageButton, {
 				Size = UDim2.new(0, 50, 1, -10),
 				LayoutOrder = menuProps.LayoutOrder,
 				Image = menuProps.Image,
 				ImagePadding = menuProps.ImagePadding,
+				Description = menuProps.Description,
 				[Roact.Event.Activated] = function()
 					self:setState({
 						CurrentMenu = menuName,
@@ -670,7 +701,7 @@ function GUI:Init(props: {
 	local menu = Roact.createElement(MenuComponent, {
 		Menus = {
 			Download = {
-				Text = "Download",
+				Description = "Download",
 				Image = IMPORT_ICON,
 				ImagePadding = Vector2.new(5, 5),
 				LayoutOrder = 2,
@@ -680,7 +711,7 @@ function GUI:Init(props: {
 				})
 			},
 			["Search Wally"] = {
-				Text = "Search Wally",
+				Description = "Search Wally",
 				Image = SEARCH_ICON,
 				ImagePadding = Vector2.new(7, 7),
 				LayoutOrder = 3,
@@ -690,7 +721,7 @@ function GUI:Init(props: {
 				})
 			},
 			Settings = {
-				Text = "Settings",
+				Description = "Settings",
 				Image = SETTINGS_ICON,
 				ImagePadding = Vector2.new(0, 0),
 				LayoutOrder = 4,
