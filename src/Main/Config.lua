@@ -37,7 +37,13 @@ Config._decoded = nil
 local changedEvent = Instance.new("BindableEvent")
 Config.Changed = changedEvent.Event
 
-local function parseLocation(rawLocation: string)
+Config._init = false
+
+local function parseLocation(rawLocation: string?)
+
+    if not rawLocation then
+        return nil
+    end
 
     local tokens = string.split(rawLocation, "/")
     --print(tokens)
@@ -179,7 +185,7 @@ local function onUpdate(attribute)
     changedEvent:Fire()
 end
 
-local function init()
+function Config:Init()
 
     Config:Load()
 
@@ -194,8 +200,12 @@ local function init()
     local configInstance = getConfiguration()
     configInstance.AttributeChanged:Connect(onUpdate)
 
+    Config._init = true
+
 end
 
-init()
+function Config:IsInitialised()
+    return self._init
+end
 
 return Config

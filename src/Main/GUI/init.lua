@@ -555,9 +555,13 @@ end
 
 local function settingsMenu(props: {
 		Version: string,
-		SharedLocation: string,
-		ServerLocation: string
 	})
+
+	--local packageLocation = Config:GetPackageLocation()
+	--local serverPackageLocation = Config:GetServerPackageLocation()
+
+	local sharedLocation = "shared"--packageLocation and Config:GetRawLocation(packageLocation) or ""
+	local serverLocation = "server"--serverPackageLocation and Config:GetRawLocation(serverPackageLocation) or ""
 
 	return Roact.createElement(ThemeContext.Consumer, {
 		render = function(theme: Theme)
@@ -577,7 +581,7 @@ local function settingsMenu(props: {
 
 			local textLabel = Roact.createElement("TextLabel", {
 				Size = UDim2.fromOffset(100, 20),
-				Text = `Packages Location: "{props.SharedLocation}"`,
+				Text = `Packages Location: "{sharedLocation}"`,
 				BackgroundTransparency = 1,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextColor3 = theme.TextColour,
@@ -586,7 +590,7 @@ local function settingsMenu(props: {
 
 			local serverTextLabel = Roact.createElement("TextLabel", {
 				Size = UDim2.fromOffset(100, 20),
-				Text = `Server Packages Location: "{props.ServerLocation}"`,
+				Text = `Server Packages Location: "{serverLocation}"`,
 				BackgroundTransparency = 1,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextColor3 = theme.TextColour,
@@ -689,14 +693,12 @@ function GUI:Init(props: {
 		OnDownload: (url: string) -> nil,
 		OnBrowse: () -> nil,
 		OnWallySearch: (rawText: string) -> {PackageDescription},
-		OnWallyRow: (scope: string, name: string) -> PackageMetaData?
+		OnWallyRow: (scope: string, name: string) -> PackageMetaData?,
+		OnInit: () -> nil
 	})
 
 	--selene: allow(unused_variable)
 	local toolbar, widget = createToolbar(props.Plugin)
-
-	local packageLocation = Config:GetPackageLocation()
-	local serverPackageLocation = Config:GetServerPackageLocation()
 
 	local menu = Roact.createElement(MenuComponent, {
 		Menus = {
@@ -727,8 +729,6 @@ function GUI:Init(props: {
 				LayoutOrder = 4,
 				Element = Roact.createElement(settingsMenu, {
 					["Version"] = Version.Value,
-					SharedLocation = Config:GetRawLocation(packageLocation),
-					ServerLocation = Config:GetRawLocation(serverPackageLocation)
 				})
 			}
 		},

@@ -14,7 +14,33 @@ local RPM_SETTINGS_KEY = "rpm_settings"
 
 local WALLY_PACKAGE_PATTERN = "^([%w-]+)/([%w-]+)@(%w+.%w+.%w+)$"
 
+local function init()
+
+	if Config:IsInitialised() then
+		return
+	end
+
+	Config:Init()
+
+	if not Config:Get("Logging Level") then
+		Config:Set("Logging Level", Logging.INFO)
+	end
+
+	Config.Changed:Connect(function()
+		Logging:SetLevel(Config:Get("Logging Level"))
+	end)
+	Logging:SetLevel(Config:Get("Logging Level"))
+
+	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
+
+	if pluginSettings == nil then
+		plugin:SetSetting(RPM_SETTINGS_KEY, {})
+	end
+end
+
 local function onDownload(inputText: string)
+
+	init()
 
 	Logging:Debug(`Download button with '{inputText}'`)
 
@@ -71,18 +97,9 @@ local function onBrowse()
 	Selection:Add({installedPackage})
 end
 
-local function init()
-
+local function startUp()
+	-- Run start up procedures that make no permanent changes to studio / places
 	Logging:SetRootInstance(script.Parent)
-
-	if not Config:Get("Logging Level") then
-		Config:Set("Logging Level", Logging.INFO)
-	end
-
-	Config.Changed:Connect(function()
-		Logging:SetLevel(Config:Get("Logging Level"))
-	end)
-	Logging:SetLevel(Config:Get("Logging Level"))
 
 	GUI:Init({
 		Plugin = plugin,
@@ -92,12 +109,6 @@ local function init()
 		OnWallyRow = onResultRow
 	})
 
-	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
-
-	if pluginSettings == nil then
-		plugin:SetSetting(RPM_SETTINGS_KEY, {})
-	end
-
 end
 
-init()
+startUp()
