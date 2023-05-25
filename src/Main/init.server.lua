@@ -83,6 +83,8 @@ end
 
 local function onBrowse()
 
+	init()
+
 	local file = StudioService:PromptImportFile({"zip", "gz"})
 
 	Logging:Debug(file)
