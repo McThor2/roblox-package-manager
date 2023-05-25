@@ -30,12 +30,20 @@ for k, v in LOCATION_LOOKUP do
     INVERTED_LOCATION_LOOKUP[v] = k
 end
 
+local Logging = require(script.Parent.Logging)
+
 Config._decoded = nil
 
 local changedEvent = Instance.new("BindableEvent")
 Config.Changed = changedEvent.Event
 
-local function parseLocation(rawLocation: string)
+Config._init = false
+
+local function parseLocation(rawLocation: string?)
+
+    if not rawLocation then
+        return nil
+    end
 
     local tokens = string.split(rawLocation, "/")
     --print(tokens)
@@ -84,7 +92,7 @@ function Config:Save()
 
     local encodedConfig = HttpService:JSONEncode(self._decoded)
 
-    print("set", encodedConfig)
+    Logging:Debug("set", encodedConfig)
     configInstance:SetAttribute(
         CONFIG_ATTRIBUTE_NAME,
         encodedConfig
@@ -102,8 +110,8 @@ function Config:Load()
     end)
 
     if not success then
-        warn("Invalid RPM config detected - ")
-        warn(config)
+        Logging:Warning("Invalid RPM config detected - ")
+        Logging:Warning(config)
         return
     end
 
@@ -121,8 +129,8 @@ function Config:Set(key, value)
     end)
 
     if not success then
-        warn("Invalid config key/value - ", key, value)
-        warn(encodedConfig)
+        Logging:Warning("Invalid config key/value - ", key, value)
+        Logging:Warning(encodedConfig)
         return
     end
 
@@ -134,7 +142,7 @@ end
 function Config:Get(key)
 
     if not self._decoded then
-        warn("Config not loaded")
+        Logging:Warning("Config not loaded")
         return nil
     end
 
@@ -151,7 +159,7 @@ function Config:GetRawLocation(object: Instance)
 		object = object.Parent
 
         if object.Parent == game and INVERTED_LOCATION_LOOKUP[object] ~= nil then
-            error(`Invalid root location for package: {object}`)
+            Logging:Error(`Invalid root location for package: {object}`)
         end
 	end
 	return result
@@ -177,7 +185,7 @@ local function onUpdate(attribute)
     changedEvent:Fire()
 end
 
-local function init()
+function Config:Init()
 
     Config:Load()
 
@@ -192,8 +200,12 @@ local function init()
     local configInstance = getConfiguration()
     configInstance.AttributeChanged:Connect(onUpdate)
 
+    Config._init = true
+
 end
 
-init()
+function Config:IsInitialised()
+    return self._init
+end
 
 return Config

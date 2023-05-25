@@ -8,7 +8,8 @@ Logging.ERROR = 4
 local currentLevel = 1
 local rootInstance = nil
 
-local DEFAULT_PREFIX = "root"
+local ROOT_LOGGER = "root"
+local DEFAULT_PREFIX = ROOT_LOGGER
 
 local Logger = {}
 do
@@ -102,19 +103,19 @@ function Logging:SetRootInstance(instance: Instance?)
 end
 
 function Logging:Debug(msg)
-    self:GetLogger("root"):Debug(msg, 3)
+    self:GetLogger(ROOT_LOGGER):Debug(msg, 3)
 end
 
 function Logging:Info(...)
-    self:GetLogger("root"):Info(...)
+    self:GetLogger(ROOT_LOGGER):Info(...)
 end
 
 function Logging:Warning(...)
-    self:GetLogger("root"):Warning(...)
+    self:GetLogger(ROOT_LOGGER):Warning(...)
 end
 
 function Logging:Error(...)
-    self:GetLogger("root"):Error(...)
+    self:GetLogger(ROOT_LOGGER):Error(...)
 end
 
 return Logging

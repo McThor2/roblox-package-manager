@@ -242,7 +242,7 @@ end
 function PackageManager:InstallArchive(file: File)
 
 	local content = file:GetBinaryContents()
-	local success, path = pcall(VirtualPath.fromZip, VirtualPath, content)
+	local success, path = pcall(VirtualPath.fromZip, content)
 	if not success then
 		Logging:Warning(`Failed to unzip archive {file}`)
 		Logging:Debug(path)
@@ -251,6 +251,23 @@ function PackageManager:InstallArchive(file: File)
 
 	local wallyFile = path / "wally.toml"
 	local rawMetaData = wallyFile:IsFile() and wallyFile:Read()
+
+	if not rawMetaData then
+		local fileExtension = string.find(file.Name, ".zip")
+		Logging:Debug(fileExtension)
+
+		local unzippedName = string.sub(file.Name, 1, fileExtension - 1)
+
+		Logging:Debug(unzippedName)
+
+		local subFolder = path / unzippedName
+
+		if subFolder:IsDir() then
+			path = subFolder
+			wallyFile = path / "wally.toml"
+			rawMetaData = wallyFile:IsFile() and wallyFile:Read()
+		end
+	end
 
 	if not rawMetaData then
 		Logging:Warning(`Could not find package meta data in file {file}`)

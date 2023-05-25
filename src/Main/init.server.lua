@@ -14,7 +14,33 @@ local RPM_SETTINGS_KEY = "rpm_settings"
 
 local WALLY_PACKAGE_PATTERN = "^([%w-]+)/([%w-]+)@(%w+.%w+.%w+)$"
 
+local function init()
+
+	if Config:IsInitialised() then
+		return
+	end
+
+	Config:Init()
+
+	if not Config:Get("Logging Level") then
+		Config:Set("Logging Level", Logging.INFO)
+	end
+
+	Config.Changed:Connect(function()
+		Logging:SetLevel(Config:Get("Logging Level"))
+	end)
+	Logging:SetLevel(Config:Get("Logging Level"))
+
+	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
+
+	if pluginSettings == nil then
+		plugin:SetSetting(RPM_SETTINGS_KEY, {})
+	end
+end
+
 local function onDownload(inputText: string)
+
+	init()
 
 	Logging:Debug(`Download button with '{inputText}'`)
 
@@ -46,64 +72,45 @@ local function onDownload(inputText: string)
 	Selection:Add(installedPackages)
 end
 
-local function onResultRow(row: GUI.ResultRow)
-
-	Logging:Debug(row)
-
-	local scope = row.Description.scope
-	local name = row.Description.name
-
-	if row.MetaData == nil then
-		Logging:Debug("set meta")
-		local metaData = WallyApi:GetMetaData(scope, name)
-		row:SetMetaData(metaData)
-	end
+local function onResultRow(scope: string, name: string): WallyApi.PackageMetaData?
+	return WallyApi:GetMetaData(scope, name)
 end
 
 local function onWallySearch(rawText: string)
 	local packagesInfo = WallyApi:ListPackages(rawText)
-	GUI:UpdateSearchResults(packagesInfo, onResultRow)
-
+	return packagesInfo
 end
 
-local function init()
+local function onBrowse()
 
+	init()
+
+	local file = StudioService:PromptImportFile({"zip", "gz"})
+
+	Logging:Debug(file)
+
+	if not file then
+		return
+	end
+
+	Logging:Info(`Using file {file}`)
+
+	local installedPackage = PackageManager:InstallArchive(file)
+	Selection:Add({installedPackage})
+end
+
+local function startUp()
+	-- Run start up procedures that make no permanent changes to studio / places
 	Logging:SetRootInstance(script.Parent)
 
-	if not Config:Get("Logging Level") then
-		Config:Set("Logging Level", Logging.INFO)
-	end
-
-	Config.Changed:Connect(function()
-		Logging:SetLevel(Config:Get("Logging Level"))
-	end)
-	Logging:SetLevel(Config:Get("Logging Level"))
-
-	GUI:Init(plugin)
-	GUI:RegisterDownloadCallback(onDownload)
-	GUI:RegisterWallySearch(onWallySearch)
-
-	GUI.BrowseActivated:Connect(function()
-		local file = StudioService:PromptImportFile({"zip", "gz"})
-
-		Logging:Debug(file)
-
-		if not file then
-			return
-		end
-
-		Logging:Info(`Using file {file}`)
-
-		local installedPackage = PackageManager:InstallArchive(file)
-		Selection:Add({installedPackage})
-	end)
-
-	local pluginSettings = plugin:GetSetting(RPM_SETTINGS_KEY)
-
-	if pluginSettings == nil then
-		plugin:SetSetting(RPM_SETTINGS_KEY, {})
-	end
+	GUI:Init({
+		Plugin = plugin,
+		OnDownload = onDownload,
+		OnBrowse = onBrowse,
+		OnWallySearch = onWallySearch,
+		OnWallyRow = onResultRow
+	})
 
 end
 
-init()
+startUp()
